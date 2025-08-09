@@ -218,7 +218,9 @@
     tag.src = "https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
 
-    function onYouTubeIframeAPIReady() {
+    // Make sure the function is attached to the window object
+    window.onYouTubeIframeAPIReady = function() {
+      console.log('YouTube IFrame API is ready');
       player = new YT.Player('player', {
         height: '270',
         width: '100%',
@@ -237,11 +239,12 @@
           origin: window.location.origin
         }
       });
-    }
+    };
 
     function onPlayerReady(event) {
+      console.log('Player ready');
       disableControls(true);
-      document.getElementById('loadBtn').disabled = false; // اطمینان دکمه Load فعال است
+      document.getElementById('loadBtn').disabled = false; // اطمینان از فعال بودن دکمه Load
     }
 
     function onPlayerStateChange(event) {
@@ -260,12 +263,9 @@
       document.getElementById('playSegmentBtn').disabled = disable;
       document.getElementById('calibrateBtn').disabled = disable;
       document.getElementById('segmentCount').disabled = disable;
-      // Load button همیشه فعال باشد
-      // document.getElementById('loadBtn').disabled = disable;
     }
 
     function parseTimestamp(timestamp) {
-      // timestamp can be mm:ss or mm:ss.mmm
       const parts = timestamp.split(':');
       if(parts.length !== 2) return null;
       const minutes = parseInt(parts[0], 10);
@@ -343,6 +343,7 @@
     }
 
     document.getElementById('loadBtn').addEventListener('click', () => {
+      console.log('Load button clicked');
       const url = document.getElementById('youtubeLink').value.trim();
       if (!url) {
         alert('Please enter a YouTube URL.');
@@ -351,6 +352,11 @@
       const videoId = extractVideoId(url);
       if (!videoId) {
         alert('Invalid YouTube URL.');
+        return;
+      }
+
+      if (!player) {
+        alert('YouTube player not ready yet. Please wait a moment and try again.');
         return;
       }
 
