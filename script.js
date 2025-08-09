@@ -1,12 +1,11 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 3.0 - FULL MANUAL CONTROL)
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 4.0 - FOCUSED DESIGN)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: User must provide SRT text or file. No more dependency on YouTube subtitles.
+// Changelog: Simplified to a pure manual tool. User must provide YouTube link and SRT file.
 // =================================================================
 
 // --- 1. DOM Element Connections ---
 const youtubeLinkInput = document.getElementById('youtube-link');
-const customSrtInput = document.getElementById('custom-srt-input');
 const srtFileInput = document.getElementById('srt-file-input');
 const loadBtn = document.getElementById('load-btn');
 const playerContainer = document.getElementById('player-container');
@@ -31,32 +30,24 @@ let playbackTimer;
 // --- 3. Core Logic: Loading and Processing Video ---
 loadBtn.addEventListener('click', async () => {
     const url = youtubeLinkInput.value.trim();
-    if (!url) return alert('Please paste a YouTube link.');
+    if (!url) return alert('Please provide a YouTube link.');
 
     const videoId = extractVideoId(url);
     if (!videoId) return alert('Invalid YouTube link. Please check the URL format.');
 
-    const customSrtText = customSrtInput.value.trim();
     const srtFile = srtFileInput.files[0];
-
-    if (!customSrtText && !srtFile) {
-        return alert('Please provide subtitles by either pasting SRT text or uploading an SRT file.');
+    if (!srtFile) {
+        return alert('Please upload an SRT subtitle file.');
     }
 
     showLoading(true);
     
     try {
-        let srtContent = '';
-        if (srtFile) {
-            srtContent = await srtFile.text();
-        } else {
-            srtContent = customSrtText;
-        }
-
+        const srtContent = await srtFile.text();
         const parsedSubtitles = parseSrt(srtContent);
 
         if (!parsedSubtitles || parsedSubtitles.length === 0) {
-            alert('Could not parse any subtitles. Please check the format of your SRT text/file.');
+            alert('Could not parse any subtitles from the file. Please check the SRT format.');
             showLoading(false);
             return;
         }
@@ -67,8 +58,8 @@ loadBtn.addEventListener('click', async () => {
         updateVideoCount();
         
     } catch (error) {
-        console.error('Critical error during video load process:', error);
-        alert('A critical error occurred. Please check the browser console (F12) for details.');
+        console.error('Error processing file:', error);
+        alert('An error occurred while reading or parsing the file.');
         showLoading(false);
     }
 });
@@ -185,11 +176,4 @@ document.addEventListener('DOMContentLoaded', () => {
     updateVisitorCount();
     const storedVideos = localStorage.getItem('videoCount_shadowingTool') || 0;
     if (videoCountElem) videoCountElem.textContent = storedVideos;
-    
-    srtFileInput.addEventListener('change', () => {
-        if (srtFileInput.files.length > 0) {
-            customSrtInput.value = '';
-            customSrtInput.placeholder = `File selected: ${srtFileInput.files[0].name}`;
-        }
-    });
 });
