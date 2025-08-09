@@ -34,7 +34,9 @@
             </div>
 
             <div id="player-container" class="hidden">
-                <div id="video-player"></div>
+                <!-- This is now a standard HTML5 video player -->
+                <video id="video-player" controls width="100%"></video>
+                
                 <div id="subtitle-box">
                     <p id="subtitle-en">...</p>
                     <p id="subtitle-tr" lang="fa" dir="rtl">...</p>
@@ -56,7 +58,7 @@
                     </div>
                 </div>
             </div>
-            <div id="loading-indicator" class="hidden"><p>Loading...</p></div>
+            <div id="loading-indicator" class="hidden"><p>Loading video stream... This may take a moment.</p></div>
         </main>
 
         <footer>
@@ -64,7 +66,7 @@
         </footer>
     </div>
 
-    <script src="https://www.youtube.com/iframe_api"></script>
+    <!-- We no longer need the YouTube IFrame API script -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="script.js"></script>
 </body>
