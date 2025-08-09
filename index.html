@@ -62,6 +62,7 @@
       outline-offset: 2px;
       transition: border-color 0.3s;
       font-family: 'Roboto', sans-serif;
+      white-space: pre-wrap;
     }
     textarea:focus {
       border-color: #1a73e8;
@@ -115,6 +116,7 @@
       user-select: none;
       text-align: center;
       font-weight: 500;
+      white-space: pre-wrap;
     }
     footer {
       margin-top: auto;
@@ -136,8 +138,8 @@
       <button id="loadBtn">Load</button>
     </div>
 
-    <label for="scriptInput">Script (one sentence per line):</label>
-    <textarea id="scriptInput" placeholder="Write each sentence on a separate line..."></textarea>
+    <label for="scriptInput">Script (with timestamps):</label>
+    <textarea id="scriptInput" placeholder="Format: [mm:ss or mm:ss.mmm - mm:ss or mm:ss.mmm] Sentence text&#10;Example:&#10;[00:00 - 00:02] Hello world&#10;[00:02.500 - 00:05.000] This sentence has milliseconds"></textarea>
 
     <div id="player"></div>
 
@@ -159,7 +161,6 @@
     let segments = [];
     let currentIndex = 0;
     let isPlayingSegment = false;
-    let segmentDuration = 3000; // default 3 seconds per sentence
 
     // Load YouTube IFrame Player API asynchronously
     let tag = document.createElement('script');
@@ -188,14 +189,12 @@
     }
 
     function onPlayerReady(event) {
-      // Player ready, disable controls initially
       disableControls(true);
     }
 
     function onPlayerStateChange(event) {
       if (event.data == YT.PlayerState.ENDED || event.data == YT.PlayerState.PAUSED) {
         if (isPlayingSegment) {
-          // If segment playing, move to next or stop
           isPlayingSegment = false;
           updatePlayButton(false);
         }
@@ -209,60 +208,49 @@
       document.getElementById('calibrateBtn').disabled = disable;
     }
 
-    function extractVideoId(url) {
-      const regex = /(?:v=|\/)([0-9A-Za-z_-]{11})/;
-      const match = url.match(regex);
-      return match ? match[1] : null;
+    // این تابع هم برای mm:ss و هم mm:ss.mmm کار می‌کند
+    function parseTimestamp(timestamp) {
+      // فرمت: mm:ss یا mm:ss.mmm
+      const parts = timestamp.split(':');
+      if(parts.length !== 2) return null;
+
+      const minutes = parseInt(parts[0], 10);
+      const seconds = parseFloat(parts[1]);
+
+      if(isNaN(minutes) || isNaN(seconds)) return null;
+
+      return minutes * 60 + seconds;
     }
 
-    function loadVideo() {
-      const url = document.getElementById('youtubeLink').value.trim();
-      const videoId = extractVideoId(url);
-      if (!videoId) {
-        alert('Please enter a valid YouTube URL.');
-        return;
-      }
-      player.loadVideoById(videoId);
-      document.getElementById('calibrateBtn').style.display = 'inline-block';
-      document.querySelector('.controls').style.display = 'flex';
-      document.getElementById('subtitleBox').style.display = 'block';
+    function parseScriptFlexible(scriptText) {
+      const lines = scriptText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const segments = [];
 
-      buildSegmentsFromScript();
-      showCurrentSegment();
-      disableControls(false);
-    }
+      // الگوی جدید که میلی ثانیه رو هم با نقطه قبول می‌کند یا فقط ثانیه
+      // مثال:
+      // [00:00 - 00:02]
+      // [00:02.500 - 00:05.000]
+      const timeRegex = /\[\s*(\d{2}:\d{2}(?:\.\d{1,3})?)\s*-\s*(\d{2}:\d{2}(?:\.\d{1,3})?)\s*\]\s*(.+)/;
 
-    function buildSegmentsFromScript() {
-      const text = document.getElementById('scriptInput').value.trim();
-      if (!text) {
-        segments = [];
-        return;
-      }
-      const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-      segments = lines.map(line => ({ text: line }));
-      currentIndex = 0;
+      lines.forEach(line => {
+        const match = line.match(timeRegex);
+        if (match) {
+          const start = parseTimestamp(match[1]);
+          const end = parseTimestamp(match[2]);
+          const text = match[3];
+          if (start !== null && end !== null && end > start) {
+            segments.push({ start, end, text });
+          }
+        }
+      });
+
+      return segments;
     }
 
     function showCurrentSegment() {
       if (!segments.length) return;
-      document.getElementById('subtitleBox').textContent = segments[currentIndex].text;
-    }
-
-    function playCurrentSegment() {
-      if (!segments.length || !player) return;
-      isPlayingSegment = true;
-      showCurrentSegment();
-
-      // For demo, play 3 seconds from current time, then pause
-      // In real app you would sync with actual subtitle timestamps
-
-      player.playVideo();
-
-      setTimeout(() => {
-        player.pauseVideo();
-        isPlayingSegment = false;
-        updatePlayButton(false);
-      }, segmentDuration);
+      const subtitleBox = document.getElementById('subtitleBox');
+      subtitleBox.textContent = segments[currentIndex].text;
     }
 
     function updatePlayButton(isPlaying) {
@@ -270,8 +258,51 @@
       btn.textContent = isPlaying ? 'Playing...' : 'Play';
     }
 
+    function playCurrentSegment() {
+      if (!segments.length || !player) return;
+      isPlayingSegment = true;
+      const seg = segments[currentIndex];
+      if (!seg) return;
+
+      showCurrentSegment();
+
+      player.seekTo(seg.start, true);
+      player.playVideo();
+
+      const durationMs = (seg.end - seg.start) * 1000;
+
+      setTimeout(() => {
+        player.pauseVideo();
+        isPlayingSegment = false;
+        updatePlayButton(false);
+      }, durationMs);
+    }
+
     document.getElementById('loadBtn').addEventListener('click', () => {
-      loadVideo();
+      const url = document.getElementById('youtubeLink').value.trim();
+      if (!url) {
+        alert('Please enter a YouTube URL.');
+        return;
+      }
+      const videoId = extractVideoId(url);
+      if (!videoId) {
+        alert('Invalid YouTube URL.');
+        return;
+      }
+
+      player.loadVideoById(videoId);
+
+      segments = parseScriptFlexible(document.getElementById('scriptInput').value.trim());
+      if (!segments.length) {
+        alert('No valid script segments found.');
+      }
+
+      document.getElementById('calibrateBtn').style.display = 'inline-block';
+      document.querySelector('.controls').style.display = 'flex';
+      document.getElementById('subtitleBox').style.display = 'block';
+
+      showCurrentSegment();
+      disableControls(false);
     });
 
     document.getElementById('calibrateBtn').addEventListener('click', () => {
@@ -301,6 +332,12 @@
         playCurrentSegment();
       }
     });
+
+    function extractVideoId(url) {
+      const regex = /(?:v=|\/)([0-9A-Za-z_-]{11})/;
+      const match = url.match(regex);
+      return match ? match[1] : null;
+    }
   </script>
 </body>
 </html>
