@@ -25,61 +25,46 @@
                     <input type="text" id="youtube-link" placeholder="Paste YouTube Link Here...">
                 </div>
                 
-                <!-- New Manual Subtitle Input Area -->
                 <div class="input-group">
-                    <label for="custom-srt-input">2. Paste Subtitles (SRT Format) - Optional</label>
-                    <textarea id="custom-srt-input" rows="8" placeholder="If YouTube subtitles fail, or for custom text, paste SRT content here..."></textarea>
+                    <label for="custom-srt-input">2. Provide Subtitles (SRT Format)</label>
+                    <div class="subtitle-options">
+                        <textarea id="custom-srt-input" rows="8" placeholder="Option A: Paste SRT content here..."></textarea>
+                        <div class="or-divider">OR</div>
+                        <input type="file" id="srt-file-input" accept=".srt">
+                    </div>
                 </div>
 
-                <button id="load-btn">Load Video & Subtitles</button>
+                <button id="load-btn">Start Shadowing</button>
             </div>
 
             <div id="player-container" class="hidden">
                 <div id="video-player"></div>
-                
                 <div id="subtitle-box">
-                    <p id="subtitle-en">English subtitle will appear here.</p>
-                    <p id="subtitle-tr" lang="fa" dir="rtl">ترجمه در اینجا نمایش داده خواهد شد.</p>
+                    <p id="subtitle-en">...</p>
+                    <p id="subtitle-tr" lang="fa" dir="rtl">...</p>
                 </div>
-
                 <div class="main-controls">
                     <button id="prev-btn" title="Previous">⏮️</button>
                     <button id="repeat-btn" title="Repeat">🔁</button>
                     <button id="next-btn" title="Next">⏭️</button>
                 </div>
-
                 <div class="settings">
                     <div class="setting-item">
                         <label for="sentence-group">Play</label>
-                        <select id="sentence-group">
-                            <option value="1" selected>1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                        </select>
+                        <select id="sentence-group"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select>
                         <label>sentence(s)</label>
                     </div>
                     <div class="setting-item">
                         <label for="translate-lang">Translate to</label>
-                        <select id="translate-lang">
-                            <option value="fa">Persian (فارسی)</option>
-                            <option value="es">Spanish</option>
-                            <option value="de">German</option>
-                            <option value="fr">French</option>
-                            <option value="ar">Arabic</option>
-                            <option value="tr">Turkish</option>
-                            <option value="none">None</option>
-                        </select>
+                        <select id="translate-lang"><option value="fa">Persian (فارسی)</option><option value="es">Spanish</option><option value="de">German</option><option value="fr">French</option><option value="ar">Arabic</option><option value="tr">Turkish</option><option value="none">None</option></select>
                     </div>
                 </div>
             </div>
-
-            <div id="loading-indicator" class="hidden">
-                <p>Loading... Please wait.</p>
-            </div>
+            <div id="loading-indicator" class="hidden"><p>Loading...</p></div>
         </main>
 
         <footer>
-            <p id="stats">Visitors: <span id="visitor-count">...</span> | Videos Loaded: <span id="video-count">...</span></p>
+            <p id="stats">Visitors: <span id="visitor-count">...</span> | Sessions Started: <span id="video-count">...</span></p>
         </footer>
     </div>
 
