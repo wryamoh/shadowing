@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 4.1 - FINAL BUG FIX)
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 4.2 - AUTOPAUSE FIX)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Removed all references to the deleted textarea element.
+// Changelog: Fixed the critical bug where the automatic pause was not working.
 // =================================================================
 
 // --- 1. DOM Element Connections ---
@@ -75,7 +75,7 @@ function setupPlayer(videoId) {
         player = new YT.Player('video-player', {
             height: '390', width: '640', videoId: videoId,
             playerVars: { 'playsinline': 1, 'controls': 1, 'cc_load_policy': 0 },
-            events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange }
+            events: { 'onReady': onPlayerReady } // Removed onStateChange from here
         });
     }
     currentIndex = 0;
@@ -85,21 +85,34 @@ function onPlayerReady(event) {
     playerContainer.classList.remove('hidden');
     playCurrentGroup();
 }
-function onPlayerStateChange(event) { if (event.data === YT.PlayerState.PLAYING) { clearTimeout(playbackTimer); } }
+
 function playCurrentGroup() {
     if (!subtitles || subtitles.length === 0) return;
     if (currentIndex >= subtitles.length) currentIndex = subtitles.length - 1;
     if (currentIndex < 0) currentIndex = 0;
+    
+    // Clear any previous timer before setting a new one
     clearTimeout(playbackTimer);
+
     const group = subtitles.slice(currentIndex, currentIndex + groupSize);
     if (group.length === 0) return;
+
     const start = group[0].start;
     const end = group[group.length - 1].end;
+
     player.seekTo(start, true);
     player.playVideo();
+
     updateSubtitlesUI(group);
-    const duration = (end - start) * 1000 + 200;
-    playbackTimer = setTimeout(() => { if (player && typeof player.pauseVideo === 'function') { player.pauseVideo(); } }, duration > 0 ? duration : 200);
+
+    const duration = (end - start) * 1000 + 200; // Add 200ms buffer
+    
+    // Set the timer to pause the video after the segment duration
+    playbackTimer = setTimeout(() => {
+        if (player && typeof player.pauseVideo === 'function') {
+            player.pauseVideo();
+        }
+    }, duration > 0 ? duration : 200);
 }
 
 // --- 5. UI and Translation Logic ---
