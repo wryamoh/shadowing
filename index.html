@@ -139,6 +139,33 @@
       white-space: pre-wrap;
       font-family: 'Roboto', sans-serif;
     }
+    #transcriptList {
+      margin-top: 10px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      max-height: 180px;
+      overflow-y: auto;
+      background: #fff;
+      user-select: none;
+      font-size: 16px;
+      font-family: 'Roboto', sans-serif;
+    }
+    #transcriptList div {
+      padding: 8px 12px;
+      border-bottom: 1px solid #ddd;
+      cursor: pointer;
+      white-space: pre-wrap;
+      color: #202124;
+    }
+    #transcriptList div:hover {
+      background-color: #e8f0fe;
+    }
+    #transcriptList div.active {
+      background-color: #1a73e8;
+      color: white;
+      font-weight: 600;
+    }
+
     footer {
       margin-top: auto;
       padding: 15px 0;
@@ -147,10 +174,6 @@
       color: #5f6368;
       user-select: none;
       text-align: center;
-    }
-    .play-count-container {
-      max-width: 120px;
-      margin: 0 auto 10px auto;
     }
 
     /* Responsive */
@@ -162,6 +185,10 @@
         height: 200px;
       }
       button, input[type="text"], select, textarea {
+        font-size: 14px;
+      }
+      #transcriptList {
+        max-height: 140px;
         font-size: 14px;
       }
     }
@@ -201,7 +228,7 @@
       <button id="nextBtn">Next</button>
     </div>
 
-    <div class="subtitle-box" id="subtitleBox" style="display:none;"></div>
+    <div id="transcriptList" style="display:none;"></div>
   </div>
 
   <footer>created by wrya zrebar</footer>
@@ -218,7 +245,6 @@
     tag.src = "https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
 
-    // Make sure the function is attached to the window object
     window.onYouTubeIframeAPIReady = function() {
       console.log('YouTube IFrame API is ready');
       player = new YT.Player('player', {
@@ -244,7 +270,7 @@
     function onPlayerReady(event) {
       console.log('Player ready');
       disableControls(true);
-      document.getElementById('loadBtn').disabled = false; // اطمینان از فعال بودن دکمه Load
+      document.getElementById('loadBtn').disabled = false;
     }
 
     function onPlayerStateChange(event) {
@@ -292,10 +318,39 @@
       return segs;
     }
 
-    function showCurrentSegment() {
-      if (!segments.length) return;
-      const subtitleBox = document.getElementById('subtitleBox');
-      subtitleBox.textContent = segments[currentIndex].text;
+    // نمایش متن همه سگمنت‌ها در زیر ویدیو
+    function renderTranscriptList() {
+      const listDiv = document.getElementById('transcriptList');
+      listDiv.innerHTML = '';
+      segments.forEach((seg, idx) => {
+        const div = document.createElement('div');
+        div.textContent = seg.text;
+        div.dataset.index = idx;
+        div.addEventListener('click', () => {
+          if (isPlayingSegment) {
+            clearTimeout(timeoutId);
+            isPlayingSegment = false;
+            updatePlayButton(false);
+          }
+          currentIndex = idx;
+          highlightCurrentTranscript();
+          playCurrentSegment();
+        });
+        listDiv.appendChild(div);
+      });
+      listDiv.style.display = 'block';
+    }
+
+    function highlightCurrentTranscript() {
+      const listDiv = document.getElementById('transcriptList');
+      Array.from(listDiv.children).forEach(child => {
+        child.classList.remove('active');
+      });
+      if(segments.length > 0 && currentIndex < segments.length) {
+        listDiv.children[currentIndex].classList.add('active');
+        // اسکرول خودکار به سطر فعال
+        listDiv.children[currentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
 
     function updatePlayButton(isPlaying) {
@@ -324,12 +379,7 @@
       }
       const endTime = segments[endIndex].end;
 
-      const subtitleBox = document.getElementById('subtitleBox');
-      let combinedText = "";
-      for(let i = currentIndex; i <= endIndex; i++) {
-        combinedText += segments[i].text + (i < endIndex ? "\n" : "");
-      }
-      subtitleBox.textContent = combinedText;
+      highlightCurrentTranscript();
 
       player.seekTo(startTime, true);
       player.playVideo();
@@ -370,10 +420,11 @@
       currentIndex = 0;
       document.getElementById('calibrateBtn').style.display = 'inline-block';
       document.querySelector('.controls').style.display = 'flex';
-      document.getElementById('subtitleBox').style.display = 'block';
 
-      showCurrentSegment();
+      renderTranscriptList();
+
       disableControls(false);
+      highlightCurrentTranscript();
     });
 
     document.getElementById('calibrateBtn').addEventListener('click', () => {
@@ -384,7 +435,7 @@
       if (isPlayingSegment) return;
       if (currentIndex > 0) {
         currentIndex--;
-        showCurrentSegment();
+        highlightCurrentTranscript();
         playCurrentSegment();
       }
     });
@@ -393,7 +444,7 @@
       if (isPlayingSegment) return;
       if (currentIndex < segments.length - 1) {
         currentIndex++;
-        showCurrentSegment();
+        highlightCurrentTranscript();
         playCurrentSegment();
       }
     });
@@ -409,7 +460,6 @@
     });
 
     function extractVideoId(url) {
-      // Match common youtube url patterns
       const regex = /(?:v=|\/)([0-9A-Za-z_-]{11})/;
       const match = url.match(regex);
       return match ? match[1] : null;
