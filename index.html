@@ -19,9 +19,19 @@
         </header>
         
         <main>
-            <div class="input-area">
-                <input type="text" id="youtube-link" placeholder="Paste YouTube Link Here...">
-                <button id="load-btn">Load</button>
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="youtube-link">1. YouTube Video Link</label>
+                    <input type="text" id="youtube-link" placeholder="Paste YouTube Link Here...">
+                </div>
+                
+                <!-- New Manual Subtitle Input Area -->
+                <div class="input-group">
+                    <label for="custom-srt-input">2. Paste Subtitles (SRT Format) - Optional</label>
+                    <textarea id="custom-srt-input" rows="8" placeholder="If YouTube subtitles fail, or for custom text, paste SRT content here..."></textarea>
+                </div>
+
+                <button id="load-btn">Load Video & Subtitles</button>
             </div>
 
             <div id="player-container" class="hidden">
