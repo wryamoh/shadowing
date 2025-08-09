@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 4.0 - FOCUSED DESIGN)
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 4.1 - FINAL BUG FIX)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Simplified to a pure manual tool. User must provide YouTube link and SRT file.
+// Changelog: Removed all references to the deleted textarea element.
 // =================================================================
 
 // --- 1. DOM Element Connections ---
