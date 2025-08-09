@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shadowing Practice Tool</title>
+    <title>Video Shadowing Tool</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;700&family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@
         <main>
             <div class="input-section">
                 <div class="input-group">
-                    <label for="youtube-link">1. YouTube Video Link</label>
-                    <input type="text" id="youtube-link" placeholder="Paste YouTube Link Here...">
+                    <label for="video-file-input">1. Upload Your Video File</label>
+                    <input type="file" id="video-file-input" accept="video/mp4,video/webm,video/ogg">
                 </div>
                 
                 <div class="input-group">
@@ -34,7 +34,6 @@
             </div>
 
             <div id="player-container" class="hidden">
-                <!-- This is now a standard HTML5 video player -->
                 <video id="video-player" controls width="100%"></video>
                 
                 <div id="subtitle-box">
@@ -58,7 +57,7 @@
                     </div>
                 </div>
             </div>
-            <div id="loading-indicator" class="hidden"><p>Loading video stream... This may take a moment.</p></div>
+            <div id="loading-indicator" class="hidden"><p>Loading video...</p></div>
         </main>
 
         <footer>
@@ -66,7 +65,7 @@
         </footer>
     </div>
 
-    <!-- We no longer need the YouTube IFrame API script -->
+    <!-- We no longer need any external API scripts except for translation -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="script.js"></script>
 </body>
