@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 1.0)
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 1.1 - ROBUST)
 // Author: Wrya Zrebar & AI Assistant
-// Features: Supports all link types, smart subtitle fetching, translation, and stats.
+// Changelog: Improved subtitle fetching logic and error handling.
 // =================================================================
 
 // --- 1. DOM Element Connections ---
@@ -29,25 +29,21 @@ let playbackTimer;
 // --- 3. Core Logic: Loading and Processing Video ---
 loadBtn.addEventListener('click', async () => {
     const url = youtubeLinkInput.value.trim();
-    if (!url) {
-        alert('Please paste a YouTube link.');
-        return;
-    }
+    if (!url) return alert('Please paste a YouTube link.');
 
     const videoId = extractVideoId(url);
-    if (!videoId) {
-        alert('Invalid YouTube link. Please check the URL format.');
-        return;
-    }
+    if (!videoId) return alert('Invalid YouTube link. Please check the URL format.');
 
     showLoading(true);
     
     try {
+        console.log(`Attempting to fetch subtitles for video ID: ${videoId}`);
+        
         // Smart Subtitle Fetching Strategy
         let fetchedSubtitles = await fetchSubtitles(videoId, 'en'); // 1. Try for manual English
 
         if (!fetchedSubtitles) {
-            console.log("Manual English subs not found. Trying auto-generated...");
+            console.log("Manual 'en' subs not found. Trying auto-generated 'a.en'...");
             fetchedSubtitles = await fetchSubtitles(videoId, 'a.en'); // 2. Fallback to auto-generated
         }
 
@@ -57,42 +53,44 @@ loadBtn.addEventListener('click', async () => {
             return;
         }
 
+        console.log(`Successfully loaded ${fetchedSubtitles.length} subtitle entries.`);
         subtitles = fetchedSubtitles;
         setupPlayer(videoId);
         updateVideoCount();
         
     } catch (error) {
-        console.error('Error during video load process:', error);
-        alert('Could not load video data. Please check the link, your internet connection, and ensure the CORS proxy is active.');
+        console.error('Critical error during video load process:', error);
+        alert('A critical error occurred. Please check the browser console (F12) for details, and ensure the CORS proxy is active.');
         showLoading(false);
     }
 });
 
 async function fetchSubtitles(videoId, langCode) {
+    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+    const subtitlesUrl = `https://www.youtube.com/api/timedtext?lang=${langCode}&v=${videoId}&fmt=srv3`;
+    
     try {
-        // Using a public CORS proxy. User might need to activate it first.
-        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-        const subtitlesUrl = `https://www.youtube.com/api/timedtext?lang=${langCode}&v=${videoId}&fmt=srv3`;
-        
-        const response = await axios.get(proxyUrl + subtitlesUrl, { timeout: 10000 }); // 10-second timeout
-        
-        if (response.data) {
+        const response = await axios.get(proxyUrl + subtitlesUrl, { timeout: 10000 });
+        if (response.status === 200 && response.data) {
             const parsedSubs = parseSrt(response.data);
             return parsedSubs.length > 0 ? parsedSubs : null;
         }
         return null;
     } catch (error) {
-        console.log(`Could not fetch subtitles for lang=${langCode}. This is often normal.`);
+        console.log(`Failed to fetch subtitles for lang=${langCode}. Status: ${error.response?.status}. This is often expected.`);
         return null;
     }
 }
 
 // --- 4. YouTube Player Setup and Control ---
-function onYouTubeIframeAPIReady() { /* Required by YouTube API, but we don't need to put anything here. */ }
+function onYouTubeIframeAPIReady() {}
 
 function setupPlayer(videoId) {
     if (player) {
         player.loadVideoById(videoId);
+        // Reset UI for new video
+        playerContainer.classList.add('hidden');
+        showLoading(true);
     } else {
         player = new YT.Player('video-player', {
             height: '390',
@@ -115,13 +113,13 @@ function onPlayerReady(event) {
 }
 
 function onPlayerStateChange(event) {
-    // If user manually plays, stop our timer
     if (event.data === YT.PlayerState.PLAYING) {
         clearTimeout(playbackTimer);
     }
 }
 
 function playCurrentGroup() {
+    if (!subtitles || subtitles.length === 0) return;
     if (currentIndex >= subtitles.length) currentIndex = subtitles.length - 1;
     if (currentIndex < 0) currentIndex = 0;
 
@@ -138,12 +136,12 @@ function playCurrentGroup() {
 
     updateSubtitlesUI(group);
 
-    const duration = (end - start) * 1000 + 200; // Add 200ms buffer
+    const duration = (end - start) * 1000 + 200;
     playbackTimer = setTimeout(() => {
         if (player && typeof player.pauseVideo === 'function') {
             player.pauseVideo();
         }
-    }, duration);
+    }, duration > 0 ? duration : 200);
 }
 
 // --- 5. UI and Translation Logic ---
@@ -159,7 +157,6 @@ async function updateSubtitlesUI(group) {
 
     subtitleTrElem.textContent = 'Translating...';
     try {
-        // Using a free, public translation API. Handles errors gracefully.
         const transResponse = await axios.get(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(enText)}&langpair=en|${targetLang}`);
         if (transResponse.data && transResponse.data.responseData) {
             const translatedText = transResponse.data.responseData.translatedText;
@@ -171,7 +168,7 @@ async function updateSubtitlesUI(group) {
         }
     } catch (error) {
         console.error('Translation API error:', error);
-        subtitleTrElem.textContent = '(Translation failed)'; // Graceful failure
+        subtitleTrElem.textContent = '(Translation failed)';
     }
 }
 
@@ -196,7 +193,6 @@ sentenceGroupSelect.addEventListener('change', (e) => {
 
 // --- 7. Utility Functions ---
 function extractVideoId(url) {
-    // Handles standard, short, and shorts links
     const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
     const match = url.match(regex);
     return match ? match[1] : null;
@@ -228,7 +224,6 @@ function timeToSeconds(time) {
 
 // --- 8. Stats Logic ---
 function updateVisitorCount() {
-    // Simple stats using browser's localStorage. Not a true unique visitor count.
     let visitors = localStorage.getItem('visitorCount_shadowingTool') || 0;
     visitors = parseInt(visitors) + 1;
     localStorage.setItem('visitorCount_shadowingTool', visitors);
