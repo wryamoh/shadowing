@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 4.2 - AUTOPAUSE FIX)
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 4.3 - STABLE & FINAL)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Fixed the critical bug where the automatic pause was not working.
+// Changelog: Completely rewrote player control logic to be event-driven, fixing the auto-pause and subtitle update bugs.
 // =================================================================
 
 // --- 1. DOM Element Connections ---
@@ -52,7 +52,6 @@ loadBtn.addEventListener('click', async () => {
             return;
         }
 
-        console.log(`Successfully loaded ${parsedSubtitles.length} subtitle entries.`);
         subtitles = parsedSubtitles;
         setupPlayer(videoId);
         updateVideoCount();
@@ -66,6 +65,7 @@ loadBtn.addEventListener('click', async () => {
 
 // --- 4. YouTube Player Setup and Control ---
 function onYouTubeIframeAPIReady() {}
+
 function setupPlayer(videoId) {
     if (player) {
         player.loadVideoById(videoId);
@@ -75,44 +75,62 @@ function setupPlayer(videoId) {
         player = new YT.Player('video-player', {
             height: '390', width: '640', videoId: videoId,
             playerVars: { 'playsinline': 1, 'controls': 1, 'cc_load_policy': 0 },
-            events: { 'onReady': onPlayerReady } // Removed onStateChange from here
+            events: { 
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange // Re-enabled for robust control
+            }
         });
     }
     currentIndex = 0;
 }
+
 function onPlayerReady(event) {
     showLoading(false);
     playerContainer.classList.remove('hidden');
     playCurrentGroup();
 }
 
+// THIS IS THE NEW, SMART, EVENT-DRIVEN LOGIC
+function onPlayerStateChange(event) {
+    // If the video starts playing (either by our code or user interaction)
+    if (event.data === YT.PlayerState.PLAYING) {
+        clearTimeout(playbackTimer); // Clear any old timer
+
+        const group = subtitles.slice(currentIndex, currentIndex + groupSize);
+        if (group.length === 0) return;
+
+        const end = group[group.length - 1].end;
+        const currentTime = player.getCurrentTime();
+        
+        // Calculate how much time is left to play for the current segment
+        const timeUntilPause = (end - currentTime) * 1000;
+
+        if (timeUntilPause > 0) {
+            playbackTimer = setTimeout(() => {
+                if (player && typeof player.pauseVideo === 'function') {
+                    player.pauseVideo();
+                }
+            }, timeUntilPause);
+        }
+    }
+}
+
 function playCurrentGroup() {
     if (!subtitles || subtitles.length === 0) return;
     if (currentIndex >= subtitles.length) currentIndex = subtitles.length - 1;
     if (currentIndex < 0) currentIndex = 0;
-    
-    // Clear any previous timer before setting a new one
-    clearTimeout(playbackTimer);
 
     const group = subtitles.slice(currentIndex, currentIndex + groupSize);
     if (group.length === 0) return;
 
     const start = group[0].start;
-    const end = group[group.length - 1].end;
-
+    
+    // Update the UI immediately
+    updateSubtitlesUI(group);
+    
+    // Seek and play. The onPlayerStateChange will handle the pausing.
     player.seekTo(start, true);
     player.playVideo();
-
-    updateSubtitlesUI(group);
-
-    const duration = (end - start) * 1000 + 200; // Add 200ms buffer
-    
-    // Set the timer to pause the video after the segment duration
-    playbackTimer = setTimeout(() => {
-        if (player && typeof player.pauseVideo === 'function') {
-            player.pauseVideo();
-        }
-    }, duration > 0 ? duration : 200);
 }
 
 // --- 5. UI and Translation Logic ---
