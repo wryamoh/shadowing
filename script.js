@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 6.0 - DIRECT VIDEO PLAYER)
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 6.1 - ROBUST DIRECT LINK FETCHER)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Switched from YouTube IFrame API to a direct HTML5 video player to bypass ads and control issues.
+// Changelog: Switched to a professional-grade API for fetching direct video links, ensuring reliability.
 // =================================================================
 
 // --- Global State Variables ---
@@ -50,10 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
             subtitles = parsedSubtitles;
             currentIndex = 0;
 
-            // 2. Fetch the direct, ad-free video URL
-            const directVideoUrl = await getDirectVideoUrl(videoId);
+            // 2. Fetch the direct, ad-free video URL using the new, reliable service
+            const directVideoUrl = await getDirectVideoUrl(url); // Pass the full URL
             if (!directVideoUrl) {
-                alert('Could not fetch the direct video stream. The video might be private or restricted.');
+                alert('Could not fetch the direct video stream. The video might be private, restricted, or the service is temporarily down.');
                 showLoading(false);
                 return;
             }
@@ -68,10 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateVideoCount();
                 playCurrentGroup(); // Play the first sentence automatically
             };
+            videoPlayer.onerror = () => {
+                showLoading(false);
+                alert('Error loading video. The video format might not be supported by your browser.');
+            };
 
         } catch (error) {
             console.error('Error during loading process:', error);
-            alert('An error occurred. The video might be unavailable or the service is down.');
+            alert('An error occurred. Please check the console (F12) for details.');
             showLoading(false);
         }
     });
@@ -83,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sentenceGroupSelect.addEventListener('change', (e) => { groupSize = parseInt(e.target.value, 10); });
 
     // Initial setup on page load
-    groupSize = parseInt(sentenceGroupSelect.value, 10);
+    groupSize = parseInt(sentenceGroup-select.value, 10);
     updateVisitorCount();
     const storedVideos = localStorage.getItem('videoCount_shadowingTool') || 0;
     document.getElementById('video-count').textContent = storedVideos;
@@ -91,22 +95,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- Core Functions ---
 
-async function getDirectVideoUrl(videoId) {
+async function getDirectVideoUrl(youtubeUrl) {
     try {
-        // Using a public Invidious API instance as a proxy to get direct video links
-        // This is more reliable than scraping.
-        const apiUrl = `https://invidious.io.lol/api/v1/videos/${videoId}`;
-        const response = await axios.get(apiUrl);
-        
-        // Find the best available quality (prefer 720p, fallback to others)
-        const streams = response.data.formatStreams;
-        const videoStream = streams.find(f => f.qualityLabel === '720p' && f.container === 'mp4') || 
-                            streams.find(f => f.qualityLabel === '480p' && f.container === 'mp4') ||
-                            streams.find(f => f.qualityLabel === '360p' && f.container === 'mp4');
+        // Using a more robust public API (cobalt) to get direct video links
+        const apiUrl = 'https://co.wuk.sh/api/json';
+        const response = await axios.post(apiUrl, {
+            url: youtubeUrl,
+            vQuality: '720' // Request 720p quality
+        }, {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
 
-        return videoStream ? videoStream.url : null;
+        // Check the status and return the direct stream URL
+        if (response.data.status === 'stream') {
+            console.log("Successfully fetched direct video stream:", response.data.url);
+            return response.data.url;
+        } else {
+            console.error("API returned an error:", response.data.text);
+            return null;
+        }
     } catch (error) {
-        console.error("Failed to get direct video URL:", error);
+        console.error("Failed to get direct video URL from API:", error);
         return null;
     }
 }
