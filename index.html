@@ -57,7 +57,13 @@
                     </div>
                 </div>
             </div>
-            <div id="loading-indicator" class="hidden"><p>Loading video...</p></div>
+            <div id="loading-indicator" class="hidden">
+                <p>Loading video...</p>
+                <!-- New Progress Bar -->
+                <div id="progress-container">
+                    <div id="progress-bar"></div>
+                </div>
+            </div>
         </main>
 
         <footer>
@@ -65,7 +71,6 @@
         </footer>
     </div>
 
-    <!-- We no longer need any external API scripts except for translation -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="script.js"></script>
 </body>
