@@ -13,16 +13,19 @@ let playbackTimer;
 let isAdPlaying = false;
 
 // --- YouTube Player API ready function ---
-function onYouTubeIframeAPIReady() {}
+// This function is called automatically by the YouTube script once it's loaded.
+function onYouTubeIframeAPIReady() {
+    // This space is intentionally left blank. We will create the player instance on button click.
+}
 
-// --- Core Functions (defined globally) ---
+// --- Core Functions (defined globally to be accessible everywhere) ---
 
 function setupPlayer(videoId) {
-    if (player) {
+    // If a player already exists, load the new video into it.
+    if (player && typeof player.loadVideoById === 'function') {
         player.loadVideoById(videoId);
-        document.getElementById('player-container').classList.add('hidden');
-        showLoading(true);
     } else {
+        // Otherwise, create a new player instance.
         player = new YT.Player('video-player', {
             height: '390', width: '640', videoId: videoId,
             playerVars: { 'playsinline': 1, 'controls': 1, 'cc_load_policy': 0 },
@@ -44,8 +47,10 @@ function onPlayerReady(event) {
 function onPlayerStateChange(event) {
     const videoData = player.getVideoData();
     const currentVideoId = extractVideoId(player.getVideoUrl());
+    // An ad is playing if the video ID of the content is different from the main video ID
     isAdPlaying = videoData.video_id !== currentVideoId;
 
+    // Only set the auto-pause timer if the main video is playing
     if (event.data === YT.PlayerState.PLAYING && !isAdPlaying) {
         clearTimeout(playbackTimer);
         const group = subtitles.slice(currentIndex, currentIndex + groupSize);
@@ -60,7 +65,8 @@ function onPlayerStateChange(event) {
                 }
             }, timeUntilPause);
         }
-    } else if (isAdPlaying) {
+    } else {
+        // If an ad is playing or the video is paused/buffering, cancel any pending timer.
         clearTimeout(playbackTimer);
     }
 }
@@ -156,6 +162,7 @@ function updateVideoCount() {
 }
 
 // --- Main App Initialization ---
+// This event listener ensures that we only try to access DOM elements after they have been fully loaded by the browser.
 document.addEventListener('DOMContentLoaded', () => {
     // Get all DOM elements once the document is ready
     const youtubeLinkInput = document.getElementById('youtube-link');
@@ -167,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sentenceGroupSelect = document.getElementById('sentence-group');
     const videoCountElem = document.getElementById('video-count');
 
-    // Attach the main event listener
+    // Attach the main event listener for the "Start Shadowing" button
     loadBtn.addEventListener('click', async () => {
         console.log("Start Shadowing button clicked.");
         const url = youtubeLinkInput.value.trim();
@@ -210,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     repeatBtn.addEventListener('click', () => { playCurrentGroup(); });
     sentenceGroupSelect.addEventListener('change', (e) => { groupSize = parseInt(e.target.value, 10); });
 
-    // Initial setup
+    // Initial setup on page load
     groupSize = parseInt(sentenceGroupSelect.value, 10);
     updateVisitorCount();
     const storedVideos = localStorage.getItem('videoCount_shadowingTool') || 0;
