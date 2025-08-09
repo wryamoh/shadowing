@@ -1,7 +1,7 @@
 // =================================================================
 // FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 3.0 - FULL MANUAL CONTROL)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Removed dependency on YouTube subtitles. User must provide SRT text or file.
+// Changelog: User must provide SRT text or file. No more dependency on YouTube subtitles.
 // =================================================================
 
 // --- 1. DOM Element Connections ---
@@ -186,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const storedVideos = localStorage.getItem('videoCount_shadowingTool') || 0;
     if (videoCountElem) videoCountElem.textContent = storedVideos;
     
-    // Clear textarea if a file is selected
     srtFileInput.addEventListener('change', () => {
         if (srtFileInput.files.length > 0) {
             customSrtInput.value = '';
