@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 4.3 - STABLE & FINAL)
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 4.4 - FIXED)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Completely rewrote player control logic to be event-driven, fixing the auto-pause and subtitle update bugs.
+// Changelog: Fixed auto-pause bug by moving pause logic directly into playCurrentGroup()
 // =================================================================
 
 // --- 1. DOM Element Connections ---
@@ -75,10 +75,7 @@ function setupPlayer(videoId) {
         player = new YT.Player('video-player', {
             height: '390', width: '640', videoId: videoId,
             playerVars: { 'playsinline': 1, 'controls': 1, 'cc_load_policy': 0 },
-            events: { 
-                'onReady': onPlayerReady,
-                'onStateChange': onPlayerStateChange // Re-enabled for robust control
-            }
+            events: { 'onReady': onPlayerReady }
         });
     }
     currentIndex = 0;
@@ -90,31 +87,7 @@ function onPlayerReady(event) {
     playCurrentGroup();
 }
 
-// THIS IS THE NEW, SMART, EVENT-DRIVEN LOGIC
-function onPlayerStateChange(event) {
-    // If the video starts playing (either by our code or user interaction)
-    if (event.data === YT.PlayerState.PLAYING) {
-        clearTimeout(playbackTimer); // Clear any old timer
-
-        const group = subtitles.slice(currentIndex, currentIndex + groupSize);
-        if (group.length === 0) return;
-
-        const end = group[group.length - 1].end;
-        const currentTime = player.getCurrentTime();
-        
-        // Calculate how much time is left to play for the current segment
-        const timeUntilPause = (end - currentTime) * 1000;
-
-        if (timeUntilPause > 0) {
-            playbackTimer = setTimeout(() => {
-                if (player && typeof player.pauseVideo === 'function') {
-                    player.pauseVideo();
-                }
-            }, timeUntilPause);
-        }
-    }
-}
-
+// --- 5. New Pause Logic (No onPlayerStateChange) ---
 function playCurrentGroup() {
     if (!subtitles || subtitles.length === 0) return;
     if (currentIndex >= subtitles.length) currentIndex = subtitles.length - 1;
@@ -124,16 +97,27 @@ function playCurrentGroup() {
     if (group.length === 0) return;
 
     const start = group[0].start;
-    
-    // Update the UI immediately
+    const end = group[group.length - 1].end;
+
     updateSubtitlesUI(group);
-    
-    // Seek and play. The onPlayerStateChange will handle the pausing.
+
+    clearTimeout(playbackTimer);
     player.seekTo(start, true);
     player.playVideo();
+
+    // Wait a little to ensure seekTo is applied, then schedule pause
+    setTimeout(() => {
+        const currentTime = player.getCurrentTime();
+        const timeUntilPause = (end - currentTime) * 1000;
+        if (timeUntilPause > 0) {
+            playbackTimer = setTimeout(() => {
+                player.pauseVideo();
+            }, timeUntilPause);
+        }
+    }, 300); // delay 0.3s for accuracy
 }
 
-// --- 5. UI and Translation Logic ---
+// --- 6. UI and Translation Logic ---
 async function updateSubtitlesUI(group) {
     const enText = group.map(s => s.text).join(' ');
     subtitleEnElem.textContent = enText;
@@ -151,13 +135,13 @@ async function updateSubtitlesUI(group) {
     } catch (error) { console.error('Translation API error:', error); subtitleTrElem.textContent = '(Translation failed)'; }
 }
 
-// --- 6. Event Listeners for Controls ---
+// --- 7. Event Listeners for Controls ---
 nextBtn.addEventListener('click', () => { currentIndex += groupSize; playCurrentGroup(); });
 prevBtn.addEventListener('click', () => { currentIndex -= groupSize; playCurrentGroup(); });
 repeatBtn.addEventListener('click', () => { playCurrentGroup(); });
 sentenceGroupSelect.addEventListener('change', (e) => { groupSize = parseInt(e.target.value, 10); });
 
-// --- 7. Utility Functions ---
+// --- 8. Utility Functions ---
 function extractVideoId(url) { const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/; const match = url.match(regex); return match ? match[1] : null; }
 function showLoading(isLoading) { loadingIndicator.classList.toggle('hidden', !isLoading); loadBtn.disabled = isLoading; }
 function parseSrt(srtText) {
@@ -197,11 +181,11 @@ function timeToSeconds(timeStr) {
     } catch (e) { return NaN; }
 }
 
-// --- 8. Stats Logic ---
+// --- 9. Stats Logic ---
 function updateVisitorCount() { let visitors = localStorage.getItem('visitorCount_shadowingTool') || 0; visitors = parseInt(visitors) + 1; localStorage.setItem('visitorCount_shadowingTool', visitors); if (visitorCountElem) visitorCountElem.textContent = visitors; }
 function updateVideoCount() { let videos = localStorage.getItem('videoCount_shadowingTool') || 0; videos = parseInt(videos) + 1; localStorage.setItem('videoCount_shadowingTool', videos); if (videoCountElem) videoCountElem.textContent = videos; }
 
-// --- 9. Initial App Load ---
+// --- 10. Initial App Load ---
 document.addEventListener('DOMContentLoaded', () => {
     groupSize = parseInt(sentenceGroupSelect.value, 10);
     updateVisitorCount();
