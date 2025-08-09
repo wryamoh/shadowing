@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 4.4 - FIXED)
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 4.5 - ROBUST PAUSE)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Fixed auto-pause bug by moving pause logic directly into playCurrentGroup()
+// Changelog: Reliable pause using requestAnimationFrame watcher + fallback timeout
 // =================================================================
 
 // --- 1. DOM Element Connections ---
@@ -25,7 +25,10 @@ let player;
 let subtitles = [];
 let currentIndex = 0;
 let groupSize = 1;
-let playbackTimer;
+
+// IDs / handles for timers/watchers (we'll clear these before starting a new group)
+let playbackTimeoutId = null;     // fallback timeout
+let playbackRafId = null;         // requestAnimationFrame id
 
 // --- 3. Core Logic: Loading and Processing Video ---
 loadBtn.addEventListener('click', async () => {
@@ -64,7 +67,7 @@ loadBtn.addEventListener('click', async () => {
 });
 
 // --- 4. YouTube Player Setup and Control ---
-function onYouTubeIframeAPIReady() {}
+function onYouTubeIframeAPIReady() { /* if loader expects this global */ }
 
 function setupPlayer(videoId) {
     if (player) {
@@ -87,7 +90,73 @@ function onPlayerReady(event) {
     playCurrentGroup();
 }
 
-// --- 5. New Pause Logic (No onPlayerStateChange) ---
+// --- 5. Reliable Pause Watcher Functions ---
+function stopPauseWatchers() {
+    if (playbackRafId) {
+        cancelAnimationFrame(playbackRafId);
+        playbackRafId = null;
+    }
+    if (playbackTimeoutId) {
+        clearTimeout(playbackTimeoutId);
+        playbackTimeoutId = null;
+    }
+}
+
+function startPauseWatcher(endTimeSeconds) {
+    stopPauseWatchers();
+    const EPS = 0.04; // tolerance in seconds
+
+    // Fallback timeout (in case RAF stalls); compute best-effort delay
+    function scheduleFallback() {
+        try {
+            const ct = (player && typeof player.getCurrentTime === 'function') ? player.getCurrentTime() : 0;
+            const ms = Math.max(0, (endTimeSeconds - ct) * 1000 + 150); // +150ms safety
+            playbackTimeoutId = setTimeout(() => {
+                try { player.pauseVideo(); } catch(e) { /* ignore */ }
+                stopPauseWatchers();
+                console.log('[shadow] fallback timeout fired, paused at', player && player.getCurrentTime && player.getCurrentTime());
+            }, ms);
+            console.log('[shadow] fallback scheduled in', ms, 'ms');
+        } catch (e) {
+            console.warn('[shadow] fallback scheduling failed', e);
+        }
+    }
+
+    // Precise RAF-based watcher
+    function rafTick() {
+        try {
+            if (!player || typeof player.getCurrentTime !== 'function') {
+                playbackRafId = requestAnimationFrame(rafTick);
+                return;
+            }
+            const ct = player.getCurrentTime();
+            // If NaN or not ready yet, keep looping
+            if (isNaN(ct)) {
+                playbackRafId = requestAnimationFrame(rafTick);
+                return;
+            }
+            // If we reached or passed endTime (with EPS tolerance) -> pause
+            if (ct >= (endTimeSeconds - EPS) || (player.getPlayerState && player.getPlayerState() === YT.PlayerState.ENDED)) {
+                try { player.pauseVideo(); } catch (e) {}
+                stopPauseWatchers();
+                console.log('[shadow] rafTick paused at', ct, 'target end', endTimeSeconds);
+                return;
+            } else {
+                playbackRafId = requestAnimationFrame(rafTick);
+            }
+        } catch (err) {
+            console.error('[shadow] rafTick error', err);
+            playbackRafId = requestAnimationFrame(rafTick);
+        }
+    }
+
+    // Start both RAF watcher and fallback timeout
+    playbackRafId = requestAnimationFrame(rafTick);
+    scheduleFallback();
+    console.log('[shadow] pause watcher started for endTime', endTimeSeconds);
+}
+
+// --- 6. Play group with robust pause scheduling ---
 function playCurrentGroup() {
     if (!subtitles || subtitles.length === 0) return;
     if (currentIndex >= subtitles.length) currentIndex = subtitles.length - 1;
@@ -101,23 +170,30 @@ function playCurrentGroup() {
 
     updateSubtitlesUI(group);
 
-    clearTimeout(playbackTimer);
-    player.seekTo(start, true);
-    player.playVideo();
+    // stop any existing watchers/timers before seeking/playing
+    stopPauseWatchers();
 
-    // Wait a little to ensure seekTo is applied, then schedule pause
-    setTimeout(() => {
-        const currentTime = player.getCurrentTime();
-        const timeUntilPause = (end - currentTime) * 1000;
-        if (timeUntilPause > 0) {
-            playbackTimer = setTimeout(() => {
-                player.pauseVideo();
-            }, timeUntilPause);
-        }
-    }, 300); // delay 0.3s for accuracy
+    // Seek then play. some browsers/youtube need a short delay for seek to take effect,
+    // but our RAF watcher will handle precise pausing.
+    try {
+        player.seekTo(start, true);
+        // small delay to ensure seek applied in many environments, then play
+        setTimeout(() => {
+            try {
+                player.playVideo();
+                console.log('[shadow] playCurrentGroup -> started playback at requested start', start);
+                // Start the watcher to pause precisely at 'end'
+                startPauseWatcher(end);
+            } catch (e) {
+                console.error('[shadow] playVideo error', e);
+            }
+        }, 120); // 120ms small delay
+    } catch (e) {
+        console.error('[shadow] seek/play error', e);
+    }
 }
 
-// --- 6. UI and Translation Logic ---
+// --- 7. UI and Translation Logic ---
 async function updateSubtitlesUI(group) {
     const enText = group.map(s => s.text).join(' ');
     subtitleEnElem.textContent = enText;
@@ -135,13 +211,13 @@ async function updateSubtitlesUI(group) {
     } catch (error) { console.error('Translation API error:', error); subtitleTrElem.textContent = '(Translation failed)'; }
 }
 
-// --- 7. Event Listeners for Controls ---
+// --- 8. Event Listeners for Controls ---
 nextBtn.addEventListener('click', () => { currentIndex += groupSize; playCurrentGroup(); });
 prevBtn.addEventListener('click', () => { currentIndex -= groupSize; playCurrentGroup(); });
 repeatBtn.addEventListener('click', () => { playCurrentGroup(); });
 sentenceGroupSelect.addEventListener('change', (e) => { groupSize = parseInt(e.target.value, 10); });
 
-// --- 8. Utility Functions ---
+// --- 9. Utility Functions ---
 function extractVideoId(url) { const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/; const match = url.match(regex); return match ? match[1] : null; }
 function showLoading(isLoading) { loadingIndicator.classList.toggle('hidden', !isLoading); loadBtn.disabled = isLoading; }
 function parseSrt(srtText) {
@@ -181,11 +257,11 @@ function timeToSeconds(timeStr) {
     } catch (e) { return NaN; }
 }
 
-// --- 9. Stats Logic ---
+// --- 10. Stats Logic ---
 function updateVisitorCount() { let visitors = localStorage.getItem('visitorCount_shadowingTool') || 0; visitors = parseInt(visitors) + 1; localStorage.setItem('visitorCount_shadowingTool', visitors); if (visitorCountElem) visitorCountElem.textContent = visitors; }
 function updateVideoCount() { let videos = localStorage.getItem('videoCount_shadowingTool') || 0; videos = parseInt(videos) + 1; localStorage.setItem('videoCount_shadowingTool', videos); if (videoCountElem) videoCountElem.textContent = videos; }
 
-// --- 10. Initial App Load ---
+// --- 11. Initial App Load ---
 document.addEventListener('DOMContentLoaded', () => {
     groupSize = parseInt(sentenceGroupSelect.value, 10);
     updateVisitorCount();
