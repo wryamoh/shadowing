@@ -103,3 +103,18 @@ footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #e0e0e0; }
 #stats { font-size: 0.8em; color: #5f6368; }
 
 .hidden { display: none; }
+
+/* New Progress Bar Styles */
+#progress-container {
+    width: 100%;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+#progress-bar {
+    width: 0%;
+    height: 10px;
+    background-color: var(--primary-color);
+    transition: width 0.4s ease;
+}
