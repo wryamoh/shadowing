@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 6.1 - ROBUST DIRECT LINK FETCHER)
+// FINAL SCRIPT FOR VIDEO SHADOWING TOOL (VERSION 7.0 - FULLY OFFLINE)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Switched to a professional-grade API for fetching direct video links, ensuring reliability.
+// Changelog: Removed all YouTube dependencies. Tool now works with local video and SRT files.
 // =================================================================
 
 // --- Global State Variables ---
@@ -13,7 +13,7 @@ let playbackTimer;
 // --- Main App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     // Get all DOM elements once the document is ready
-    const youtubeLinkInput = document.getElementById('youtube-link');
+    const videoFileInput = document.getElementById('video-file-input');
     const srtFileInput = document.getElementById('srt-file-input');
     const loadBtn = document.getElementById('load-btn');
     const videoPlayer = document.getElementById('video-player');
@@ -24,16 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Attach the main event listener for the "Start Shadowing" button
     loadBtn.addEventListener('click', async () => {
-        const url = youtubeLinkInput.value.trim();
-        if (!url) return alert('Please provide a YouTube link.');
-
-        const videoId = extractVideoId(url);
-        if (!videoId) return alert('Invalid YouTube link. Please check the URL format.');
+        const videoFile = videoFileInput.files[0];
+        if (!videoFile) return alert('Please upload a video file.');
 
         const srtFile = srtFileInput.files[0];
-        if (!srtFile) {
-            return alert('Please upload an SRT subtitle file.');
-        }
+        if (!srtFile) return alert('Please upload an SRT subtitle file.');
 
         showLoading(true);
         
@@ -50,16 +45,11 @@ document.addEventListener('DOMContentLoaded', () => {
             subtitles = parsedSubtitles;
             currentIndex = 0;
 
-            // 2. Fetch the direct, ad-free video URL using the new, reliable service
-            const directVideoUrl = await getDirectVideoUrl(url); // Pass the full URL
-            if (!directVideoUrl) {
-                alert('Could not fetch the direct video stream. The video might be private, restricted, or the service is temporarily down.');
-                showLoading(false);
-                return;
-            }
+            // 2. Create a URL for the local video file to be used by the player
+            const videoUrl = URL.createObjectURL(videoFile);
 
             // 3. Load the video and prepare the player
-            videoPlayer.src = directVideoUrl;
+            videoPlayer.src = videoUrl;
             videoPlayer.load();
             
             videoPlayer.onloadeddata = () => {
@@ -70,12 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             videoPlayer.onerror = () => {
                 showLoading(false);
-                alert('Error loading video. The video format might not be supported by your browser.');
+                alert('Error loading video. The file format might not be supported by your browser.');
             };
 
         } catch (error) {
-            console.error('Error during loading process:', error);
-            alert('An error occurred. Please check the console (F12) for details.');
+            console.error('Error processing files:', error);
+            alert('An error occurred while reading the files.');
             showLoading(false);
         }
     });
@@ -94,34 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- Core Functions ---
-
-async function getDirectVideoUrl(youtubeUrl) {
-    try {
-        // Using a more robust public API (cobalt) to get direct video links
-        const apiUrl = 'https://co.wuk.sh/api/json';
-        const response = await axios.post(apiUrl, {
-            url: youtubeUrl,
-            vQuality: '720' // Request 720p quality
-        }, {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        });
-
-        // Check the status and return the direct stream URL
-        if (response.data.status === 'stream') {
-            console.log("Successfully fetched direct video stream:", response.data.url);
-            return response.data.url;
-        } else {
-            console.error("API returned an error:", response.data.text);
-            return null;
-        }
-    } catch (error) {
-        console.error("Failed to get direct video URL from API:", error);
-        return null;
-    }
-}
 
 function playCurrentGroup() {
     const videoPlayer = document.getElementById('video-player');
@@ -145,7 +107,7 @@ function playCurrentGroup() {
 
     const duration = (end - start) * 1000;
 
-    if (duration > 0) {
+    if (duration >= 0) { // Check for non-negative duration
         playbackTimer = setTimeout(() => {
             videoPlayer.pause();
         }, duration);
@@ -174,7 +136,6 @@ async function updateSubtitlesUI(group) {
 }
 
 // --- Utility Functions ---
-function extractVideoId(url) { const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/; const match = url.match(regex); return match ? match[1] : null; }
 function showLoading(isLoading) { 
     document.getElementById('loading-indicator').classList.toggle('hidden', !isLoading);
     document.getElementById('load-btn').disabled = isLoading;
