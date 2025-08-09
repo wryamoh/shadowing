@@ -1,54 +1,44 @@
-// ==UserScript==
-// @name         YouTube Auto Pause After Each Sentence
-// @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Pause YouTube video after each subtitle line (skip ads)
-// @match        https://www.youtube.com/*
-// @grant        none
-// ==/UserScript==
-
-(function () {
-    'use strict';
-
-    let lastSubtitle = "";
-    let player;
-
-    function initPlayer() {
-        player = document.querySelector('video');
+(function() {
+    function getVideo() {
+        return document.querySelector('video');
     }
 
-    function isAdPlaying() {
-        // اگر تبلیغ باشد، کلاس ad-showing روی body یا پلیر می‌آید
-        return document.querySelector('.ad-showing') !== null;
+    function isAdPlaying(video) {
+        // تبلیغات معمولا یا تگ خاص دارند یا طول کوتاه
+        return video && (video.duration < 60 || document.querySelector('.ad-showing'));
     }
 
-    function checkSubtitles() {
-        if (!player) {
-            initPlayer();
-            return;
-        }
-
-        if (isAdPlaying()) {
-            console.log("⏳ تبلیغ در حال پخش است، صبر می‌کنیم...");
-            return;
-        }
-
-        let subtitleElement = document.querySelector('.ytp-caption-segment');
-        if (subtitleElement) {
-            let currentSubtitle = subtitleElement.innerText.trim();
-            if (currentSubtitle && currentSubtitle !== lastSubtitle) {
-                lastSubtitle = currentSubtitle;
-                console.log("⏸ مکث بعد از جمله:", currentSubtitle);
-                player.pause();
+    function waitForMainVideo(callback) {
+        let checkInterval = setInterval(() => {
+            let video = getVideo();
+            if (video && !isAdPlaying(video)) {
+                clearInterval(checkInterval);
+                callback(video);
             }
-        }
+        }, 500);
     }
 
-    // اجرا در بازه زمانی کوتاه
-    setInterval(checkSubtitles, 500);
+    function setupPlayPauseControl(video) {
+        console.log("🎬 ویدئوی اصلی پیدا شد، کنترل فعال شد");
 
-    // وقتی پلیر تغییر می‌کند
-    const observer = new MutationObserver(initPlayer);
-    observer.observe(document.body, { childList: true, subtree: true });
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') { // با Space پلی/پاز کن
+                e.preventDefault();
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
+            }
+        });
 
+        // اگر ویدئو تمام شد، دوباره صبر می‌کنیم تا ویدئوی بعدی بیاید
+        video.addEventListener('ended', () => {
+            console.log("⏳ ویدئو تمام شد، منتظر ویدئوی بعدی هستیم...");
+            waitForMainVideo(setupPlayPauseControl);
+        });
+    }
+
+    // شروع کار
+    waitForMainVideo(setupPlayPauseControl);
 })();
