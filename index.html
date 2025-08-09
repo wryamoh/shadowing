@@ -17,14 +17,30 @@
       align-items: center;
       justify-content: flex-start;
     }
-    h1 {
-      font-weight: 400;
-      font-size: 28px;
-      margin-bottom: 30px;
+    #logo {
+      font-weight: 700;
+      font-size: 32px;
       text-align: center;
-      text-shadow: 0 1px 1px rgba(0,0,0,0.1);
-      color: #202124;
+      margin-bottom: 30px;
+      user-select: none;
     }
+    #logo span:nth-child(1) { color: #4285F4; }
+    #logo span:nth-child(2) { color: #DB4437; }
+    #logo span:nth-child(3) { color: #F4B400; }
+    #logo span:nth-child(4) { color: #4285F4; }
+    #logo span:nth-child(5) { color: #0F9D58; }
+    #logo span:nth-child(6) { color: #DB4437; }
+    #logo span:nth-child(7) { color: #F4B400; }
+    #logo span:nth-child(8) { color: #4285F4; }
+    #logo span:nth-child(9) { color: #0F9D58; }
+    #logo span:nth-child(10) { color: transparent; } /* space */
+    #logo span:nth-child(11) { color: #DB4437; }
+    #logo span:nth-child(12) { color: #F4B400; }
+    #logo span:nth-child(13) { color: #4285F4; }
+    #logo span:nth-child(14) { color: #0F9D58; }
+    #logo span:nth-child(15) { color: #DB4437; }
+    #logo span:nth-child(16) { color: #F4B400; }
+
     .container {
       width: 100%;
       max-width: 480px;
@@ -35,8 +51,9 @@
     label {
       font-weight: 500;
       margin-bottom: 5px;
+      user-select: none;
     }
-    input[type="text"] {
+    input[type="text"], select {
       padding: 10px;
       font-size: 16px;
       border: 1.5px solid #dadce0;
@@ -45,8 +62,9 @@
       box-sizing: border-box;
       outline-offset: 2px;
       transition: border-color 0.3s;
+      user-select: text;
     }
-    input[type="text"]:focus {
+    input[type="text"]:focus, select:focus {
       border-color: #1a73e8;
       outline: none;
     }
@@ -63,6 +81,7 @@
       transition: border-color 0.3s;
       font-family: 'Roboto', sans-serif;
       white-space: pre-wrap;
+      user-select: text;
     }
     textarea:focus {
       border-color: #1a73e8;
@@ -103,6 +122,7 @@
       justify-content: center;
       gap: 15px;
       margin-top: 15px;
+      flex-wrap: wrap;
     }
     .subtitle-box {
       margin-top: 10px;
@@ -117,6 +137,7 @@
       text-align: center;
       font-weight: 500;
       white-space: pre-wrap;
+      font-family: 'Roboto', sans-serif;
     }
     footer {
       margin-top: auto;
@@ -127,19 +148,48 @@
       user-select: none;
       text-align: center;
     }
+    .play-count-container {
+      max-width: 120px;
+      margin: 0 auto 10px auto;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      body {
+        padding: 15px 8px;
+      }
+      #player {
+        height: 200px;
+      }
+      button, input[type="text"], select, textarea {
+        font-size: 14px;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Shadowing Player</h1>
+  <h1 id="logo">
+    <span>S</span><span>h</span><span>a</span><span>d</span><span>o</span><span>w</span><span>i</span><span>n</span><span>g</span><span> </span>
+    <span>P</span><span>l</span><span>a</span><span>y</span><span>e</span><span>r</span>
+  </h1>
   <div class="container">
     <label for="youtubeLink">Enter YouTube URL:</label>
     <div class="row">
-      <input type="text" id="youtubeLink" placeholder="https://www.youtube.com/watch?v=..." />
+      <input type="text" id="youtubeLink" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" />
       <button id="loadBtn">Load</button>
     </div>
 
     <label for="scriptInput">Script (with timestamps):</label>
     <textarea id="scriptInput" placeholder="Format: [mm:ss or mm:ss.mmm - mm:ss or mm:ss.mmm] Sentence text&#10;Example:&#10;[00:00 - 00:02] Hello world&#10;[00:02.500 - 00:05.000] This sentence has milliseconds"></textarea>
+
+    <div class="play-count-container">
+      <label for="segmentCount">Segments to play:</label>
+      <select id="segmentCount" title="Number of segments to play at once">
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+      </select>
+    </div>
 
     <div id="player"></div>
 
@@ -161,8 +211,9 @@
     let segments = [];
     let currentIndex = 0;
     let isPlayingSegment = false;
+    let timeoutId = null;
 
-    // Load YouTube IFrame Player API asynchronously
+    // Load YouTube IFrame API asynchronously
     let tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
@@ -195,6 +246,7 @@
     function onPlayerStateChange(event) {
       if (event.data == YT.PlayerState.ENDED || event.data == YT.PlayerState.PAUSED) {
         if (isPlayingSegment) {
+          clearTimeout(timeoutId);
           isPlayingSegment = false;
           updatePlayButton(false);
         }
@@ -206,32 +258,24 @@
       document.getElementById('nextBtn').disabled = disable;
       document.getElementById('playSegmentBtn').disabled = disable;
       document.getElementById('calibrateBtn').disabled = disable;
+      document.getElementById('segmentCount').disabled = disable;
+      document.getElementById('loadBtn').disabled = disable;
     }
 
-    // این تابع هم برای mm:ss و هم mm:ss.mmm کار می‌کند
     function parseTimestamp(timestamp) {
-      // فرمت: mm:ss یا mm:ss.mmm
+      // timestamp can be mm:ss or mm:ss.mmm
       const parts = timestamp.split(':');
       if(parts.length !== 2) return null;
-
       const minutes = parseInt(parts[0], 10);
       const seconds = parseFloat(parts[1]);
-
       if(isNaN(minutes) || isNaN(seconds)) return null;
-
       return minutes * 60 + seconds;
     }
 
     function parseScriptFlexible(scriptText) {
       const lines = scriptText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      const segments = [];
-
-      // الگوی جدید که میلی ثانیه رو هم با نقطه قبول می‌کند یا فقط ثانیه
-      // مثال:
-      // [00:00 - 00:02]
-      // [00:02.500 - 00:05.000]
+      const segs = [];
       const timeRegex = /\[\s*(\d{2}:\d{2}(?:\.\d{1,3})?)\s*-\s*(\d{2}:\d{2}(?:\.\d{1,3})?)\s*\]\s*(.+)/;
-
       lines.forEach(line => {
         const match = line.match(timeRegex);
         if (match) {
@@ -239,12 +283,11 @@
           const end = parseTimestamp(match[2]);
           const text = match[3];
           if (start !== null && end !== null && end > start) {
-            segments.push({ start, end, text });
+            segs.push({ start, end, text });
           }
         }
       });
-
-      return segments;
+      return segs;
     }
 
     function showCurrentSegment() {
@@ -255,23 +298,42 @@
 
     function updatePlayButton(isPlaying) {
       const btn = document.getElementById('playSegmentBtn');
-      btn.textContent = isPlaying ? 'Playing...' : 'Play';
+      btn.textContent = isPlaying ? "Pause" : "Play";
     }
 
     function playCurrentSegment() {
       if (!segments.length || !player) return;
+      if (isPlayingSegment) return;
+
       isPlayingSegment = true;
-      const seg = segments[currentIndex];
-      if (!seg) return;
+      updatePlayButton(true);
 
-      showCurrentSegment();
+      const segmentCountSelect = document.getElementById('segmentCount');
+      const count = parseInt(segmentCountSelect.value, 10) || 1;
 
-      player.seekTo(seg.start, true);
+      const startSegment = segments[currentIndex];
+      if (!startSegment) return;
+
+      const startTime = startSegment.start;
+
+      let endIndex = currentIndex + count -1;
+      if (endIndex >= segments.length) {
+        endIndex = segments.length -1;
+      }
+      const endTime = segments[endIndex].end;
+
+      const subtitleBox = document.getElementById('subtitleBox');
+      let combinedText = "";
+      for(let i = currentIndex; i <= endIndex; i++) {
+        combinedText += segments[i].text + (i < endIndex ? "\n" : "");
+      }
+      subtitleBox.textContent = combinedText;
+
+      player.seekTo(startTime, true);
       player.playVideo();
 
-      const durationMs = (seg.end - seg.start) * 1000;
-
-      setTimeout(() => {
+      const durationMs = (endTime - startTime) * 1000;
+      timeoutId = setTimeout(() => {
         player.pauseVideo();
         isPlayingSegment = false;
         updatePlayButton(false);
@@ -297,6 +359,7 @@
         alert('No valid script segments found.');
       }
 
+      currentIndex = 0;
       document.getElementById('calibrateBtn').style.display = 'inline-block';
       document.querySelector('.controls').style.display = 'flex';
       document.getElementById('subtitleBox').style.display = 'block';
@@ -328,12 +391,17 @@
     });
 
     document.getElementById('playSegmentBtn').addEventListener('click', () => {
-      if (!isPlayingSegment) {
+      if (isPlayingSegment) {
+        player.pauseVideo();
+        isPlayingSegment = false;
+        updatePlayButton(false);
+      } else {
         playCurrentSegment();
       }
     });
 
     function extractVideoId(url) {
+      // Match common youtube url patterns
       const regex = /(?:v=|\/)([0-9A-Za-z_-]{11})/;
       const match = url.match(regex);
       return match ? match[1] : null;
