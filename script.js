@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sentenceGroupSelect.addEventListener('change', (e) => { groupSize = parseInt(e.target.value, 10); });
 
     // Initial setup on page load
-    groupSize = parseInt(sentenceGroup-select.value, 10);
+    groupSize = parseInt(sentenceGroupSelect.value, 10);
     updateVisitorCount();
     const storedVideos = localStorage.getItem('videoCount_shadowingTool') || 0;
     document.getElementById('video-count').textContent = storedVideos;
