@@ -1,4 +1,3 @@
-/* CSS code remains largely the same, with additions for the new textarea */
 @font-face {
     font-family: 'Product Sans';
     src: url('https://fonts.gstatic.com/s/productsans/v5/HYvgU2fE2nC16hga8un--g.woff2') format('woff2');
@@ -43,13 +42,7 @@ body {
 }
 
 header { margin-bottom: 20px; }
-.google-title {
-    font-family: 'Product Sans', sans-serif;
-    font-size: 3.5em;
-    font-weight: 700;
-    margin: 0;
-    letter-spacing: -2px;
-}
+.google-title { font-family: 'Product Sans', sans-serif; font-size: 3.5em; font-weight: 700; margin: 0; letter-spacing: -2px; }
 .google-title span:nth-child(1) { color: #4285F4; }
 .google-title span:nth-child(2) { color: #DB4437; }
 .google-title span:nth-child(3) { color: #F4B400; }
@@ -71,12 +64,17 @@ header { margin-bottom: 20px; }
     border: 1px solid var(--border-color);
     border-radius: 8px;
     font-size: 16px;
-    box-sizing: border-box; /* Important for width calculation */
+    box-sizing: border-box;
 }
 
-#custom-srt-input {
-    font-family: 'Courier New', Courier, monospace;
-    resize: vertical;
+#custom-srt-input { font-family: 'Courier New', Courier, monospace; resize: vertical; }
+
+.subtitle-options { display: flex; flex-direction: column; gap: 10px; }
+.or-divider { font-weight: bold; color: #888; margin: 5px 0; }
+#srt-file-input {
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    border-radius: 8px;
 }
 
 #load-btn {
@@ -91,6 +89,7 @@ header { margin-bottom: 20px; }
     transition: all 0.2s ease-in-out;
     font-size: 16px;
     width: 100%;
+    margin-top: 10px;
 }
 #load-btn:hover { background-color: var(--primary-color-hover); box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
 
