@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 5.0 - AD HANDLING)
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 5.1 - FINAL & STABLE)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Implemented robust YouTube ad detection to prevent timing issues.
+// Changelog: Final bug fixes for button listener and robust ad-handling.
 // =================================================================
 
 // --- 1. DOM Element Connections ---
@@ -26,10 +26,11 @@ let subtitles = [];
 let currentIndex = 0;
 let groupSize = 1;
 let playbackTimer;
-let isAdPlaying = false; // New state to track ads
+let isAdPlaying = false;
 
 // --- 3. Core Logic: Loading and Processing Video ---
-loadBtn.addEventListener('click', async () => {
+async function startShadowing() {
+    console.log("Start Shadowing button clicked.");
     const url = youtubeLinkInput.value.trim();
     if (!url) return alert('Please provide a YouTube link.');
 
@@ -62,7 +63,7 @@ loadBtn.addEventListener('click', async () => {
         alert('An error occurred while reading or parsing the file.');
         showLoading(false);
     }
-});
+}
 
 // --- 4. YouTube Player Setup and Control ---
 function onYouTubeIframeAPIReady() {}
@@ -88,28 +89,21 @@ function setupPlayer(videoId) {
 function onPlayerReady(event) {
     showLoading(false);
     playerContainer.classList.remove('hidden');
-    // Don't play immediately, wait for user or state change
+    playCurrentGroup();
 }
 
-// NEW ROBUST, AD-AWARE STATE CHANGE HANDLER
 function onPlayerStateChange(event) {
-    // Check if an ad is playing by looking at the video data
-    // This is a heuristic, but often works.
     const videoData = player.getVideoData();
-    isAdPlaying = videoData.video_id !== extractVideoId(player.getVideoUrl());
+    const currentVideoId = extractVideoId(player.getVideoUrl());
+    isAdPlaying = videoData.video_id !== currentVideoId;
 
     if (event.data === YT.PlayerState.PLAYING && !isAdPlaying) {
-        console.log("Main video is playing. Setting up auto-pause.");
         clearTimeout(playbackTimer);
-
         const group = subtitles.slice(currentIndex, currentIndex + groupSize);
         if (group.length === 0) return;
-
         const end = group[group.length - 1].end;
         const currentTime = player.getCurrentTime();
-        
         const timeUntilPause = (end - currentTime) * 1000;
-
         if (timeUntilPause > 0) {
             playbackTimer = setTimeout(() => {
                 if (player && typeof player.pauseVideo === 'function') {
@@ -118,8 +112,7 @@ function onPlayerStateChange(event) {
             }, timeUntilPause);
         }
     } else if (isAdPlaying) {
-        console.log("Ad is playing. Auto-pause is disabled.");
-        clearTimeout(playbackTimer); // Cancel any pending pause timer
+        clearTimeout(playbackTimer);
     }
 }
 
@@ -127,14 +120,10 @@ function playCurrentGroup() {
     if (!subtitles || subtitles.length === 0) return;
     if (currentIndex >= subtitles.length) currentIndex = subtitles.length - 1;
     if (currentIndex < 0) currentIndex = 0;
-
     const group = subtitles.slice(currentIndex, currentIndex + groupSize);
     if (group.length === 0) return;
-
     const start = group[0].start;
-    
     updateSubtitlesUI(group);
-    
     player.seekTo(start, true);
     player.playVideo();
 }
@@ -209,6 +198,7 @@ function updateVideoCount() { let videos = localStorage.getItem('videoCount_shad
 
 // --- 9. Initial App Load ---
 document.addEventListener('DOMContentLoaded', () => {
+    loadBtn.addEventListener('click', startShadowing); // Correctly attach the listener
     groupSize = parseInt(sentenceGroupSelect.value, 10);
     updateVisitorCount();
     const storedVideos = localStorage.getItem('videoCount_shadowingTool') || 0;
