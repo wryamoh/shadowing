@@ -1,0 +1,178 @@
+/* Google Fonts Import - Product Sans is not on Google Fonts, so we use a similar open-source alternative or a generic one */
+@font-face {
+    font-family: 'Product Sans';
+    src: url('https://fonts.gstatic.com/s/productsans/v5/HYvgU2fE2nC16hga8un--g.woff2') format('woff2');
+    font-weight: 400;
+}
+@font-face {
+    font-family: 'Product Sans';
+    src: url('https://fonts.gstatic.com/s/productsans/v5/HYvgU2fE2nC16hga8un_sA.woff2') format('woff2');
+    font-weight: 700;
+}
+
+:root {
+    --primary-color: #28a745;
+    --primary-color-hover: #218838;
+    --background-color: #f8f9fa;
+    --container-bg: #ffffff;
+    --text-color: #202124;
+    --subtitle-bg: #e9f5ec;
+    --border-color: #dadce0;
+}
+
+body {
+    font-family: 'Product Sans', 'Vazirmatn', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 800px;
+    background: var(--container-bg);
+    padding: 20px 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    text-align: center;
+}
+
+header {
+    margin-bottom: 30px;
+}
+
+.google-title {
+    font-family: 'Product Sans', sans-serif;
+    font-size: 3.5em;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -2px;
+}
+.google-title span:nth-child(1) { color: #4285F4; } /* S */
+.google-title span:nth-child(2) { color: #DB4437; } /* H */
+.google-title span:nth-child(3) { color: #F4B400; } /* A */
+.google-title span:nth-child(4) { color: #4285F4; } /* D */
+.google-title span:nth-child(5) { color: #0F9D58; } /* O */
+.google-title span:nth-child(6) { color: #DB4437; } /* W */
+.google-title span:nth-child(7) { color: #F4B400; } /* I */
+.google-title span:nth-child(8) { color: #4285F4; } /* N */
+.google-title span:nth-child(9) { color: #0F9D58; } /* G */
+
+.creator-name {
+    margin: 5px 0 0 0;
+    color: #5f6368;
+    font-size: 0.9em;
+}
+
+.input-area {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+#youtube-link {
+    flex-grow: 1;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    font-size: 16px;
+    padding-left: 20px;
+}
+
+button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 24px;
+    background-color: var(--primary-color);
+    color: white;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-size: 16px;
+}
+button:hover {
+    background-color: var(--primary-color-hover);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+#video-player {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#subtitle-box {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: var(--subtitle-bg);
+    border-radius: 8px;
+    min-height: 80px;
+}
+#subtitle-en {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 0 0 10px 0;
+}
+#subtitle-tr {
+    font-size: 1.1em;
+    margin: 0;
+}
+
+.main-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin: 20px 0;
+}
+.main-controls button {
+    font-size: 24px;
+    padding: 10px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+}
+
+.settings {
+    margin-top: 15px;
+    background-color: #f1f3f4;
+    padding: 15px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+.setting-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+select {
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+}
+
+footer {
+    margin-top: 30px;
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
+}
+#stats {
+    font-size: 0.8em;
+    color: #5f6368;
+}
+
+.hidden {
+    display: none;
+}
