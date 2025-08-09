@@ -1,4 +1,10 @@
-// --- DOM Elements ---
+// =================================================================
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 1.0)
+// Author: Wrya Zrebar & AI Assistant
+// Features: Supports all link types, smart subtitle fetching, translation, and stats.
+// =================================================================
+
+// --- 1. DOM Element Connections ---
 const youtubeLinkInput = document.getElementById('youtube-link');
 const loadBtn = document.getElementById('load-btn');
 const playerContainer = document.getElementById('player-container');
@@ -13,19 +19,14 @@ const translateLangSelect = document.getElementById('translate-lang');
 const visitorCountElem = document.getElementById('visitor-count');
 const videoCountElem = document.getElementById('video-count');
 
-// --- Global State ---
+// --- 2. Global State Variables ---
 let player;
 let subtitles = [];
 let currentIndex = 0;
 let groupSize = 1;
 let playbackTimer;
 
-// --- YouTube IFrame API ---
-function onYouTubeIframeAPIReady() {
-    // This function is called by the YouTube API script
-}
-
-// --- Main Logic ---
+// --- 3. Core Logic: Loading and Processing Video ---
 loadBtn.addEventListener('click', async () => {
     const url = youtubeLinkInput.value.trim();
     if (!url) {
@@ -35,35 +36,59 @@ loadBtn.addEventListener('click', async () => {
 
     const videoId = extractVideoId(url);
     if (!videoId) {
-        alert('Invalid YouTube link. Please check the URL.');
+        alert('Invalid YouTube link. Please check the URL format.');
         return;
     }
 
     showLoading(true);
+    
     try {
-        // We need a proxy to bypass CORS issues for fetching subtitles
-        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-        const subtitlesUrl = `https://www.youtube.com/api/timedtext?lang=en&v=${videoId}&fmt=srv3`;
-        
-        const response = await axios.get(proxyUrl + subtitlesUrl);
-        subtitles = parseSrt(response.data);
+        // Smart Subtitle Fetching Strategy
+        let fetchedSubtitles = await fetchSubtitles(videoId, 'en'); // 1. Try for manual English
 
-        if (subtitles.length === 0) {
-            alert('No English subtitles found for this video.');
+        if (!fetchedSubtitles) {
+            console.log("Manual English subs not found. Trying auto-generated...");
+            fetchedSubtitles = await fetchSubtitles(videoId, 'a.en'); // 2. Fallback to auto-generated
+        }
+
+        if (!fetchedSubtitles) {
+            alert('No English subtitles (manual or auto-generated) found for this video.');
             showLoading(false);
             return;
         }
 
+        subtitles = fetchedSubtitles;
         setupPlayer(videoId);
         updateVideoCount();
-        showLoading(false);
-        playerContainer.classList.remove('hidden');
+        
     } catch (error) {
-        console.error('Error loading subtitles:', error);
-        alert('Could not load subtitles. The video might not have English subtitles, or there was a network error.');
+        console.error('Error during video load process:', error);
+        alert('Could not load video data. Please check the link, your internet connection, and ensure the CORS proxy is active.');
         showLoading(false);
     }
 });
+
+async function fetchSubtitles(videoId, langCode) {
+    try {
+        // Using a public CORS proxy. User might need to activate it first.
+        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+        const subtitlesUrl = `https://www.youtube.com/api/timedtext?lang=${langCode}&v=${videoId}&fmt=srv3`;
+        
+        const response = await axios.get(proxyUrl + subtitlesUrl, { timeout: 10000 }); // 10-second timeout
+        
+        if (response.data) {
+            const parsedSubs = parseSrt(response.data);
+            return parsedSubs.length > 0 ? parsedSubs : null;
+        }
+        return null;
+    } catch (error) {
+        console.log(`Could not fetch subtitles for lang=${langCode}. This is often normal.`);
+        return null;
+    }
+}
+
+// --- 4. YouTube Player Setup and Control ---
+function onYouTubeIframeAPIReady() { /* Required by YouTube API, but we don't need to put anything here. */ }
 
 function setupPlayer(videoId) {
     if (player) {
@@ -73,9 +98,10 @@ function setupPlayer(videoId) {
             height: '390',
             width: '640',
             videoId: videoId,
-            playerVars: { 'playsinline': 1, 'controls': 1 },
+            playerVars: { 'playsinline': 1, 'controls': 1, 'cc_load_policy': 0 },
             events: {
-                'onReady': onPlayerReady
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange
             }
         });
     }
@@ -83,16 +109,21 @@ function setupPlayer(videoId) {
 }
 
 function onPlayerReady(event) {
+    showLoading(false);
+    playerContainer.classList.remove('hidden');
     playCurrentGroup();
 }
 
+function onPlayerStateChange(event) {
+    // If user manually plays, stop our timer
+    if (event.data === YT.PlayerState.PLAYING) {
+        clearTimeout(playbackTimer);
+    }
+}
+
 function playCurrentGroup() {
-    if (currentIndex >= subtitles.length) {
-        currentIndex = subtitles.length - 1;
-    }
-    if (currentIndex < 0) {
-        currentIndex = 0;
-    }
+    if (currentIndex >= subtitles.length) currentIndex = subtitles.length - 1;
+    if (currentIndex < 0) currentIndex = 0;
 
     clearTimeout(playbackTimer);
 
@@ -107,7 +138,7 @@ function playCurrentGroup() {
 
     updateSubtitlesUI(group);
 
-    const duration = (end - start) * 1000;
+    const duration = (end - start) * 1000 + 200; // Add 200ms buffer
     playbackTimer = setTimeout(() => {
         if (player && typeof player.pauseVideo === 'function') {
             player.pauseVideo();
@@ -115,6 +146,7 @@ function playCurrentGroup() {
     }, duration);
 }
 
+// --- 5. UI and Translation Logic ---
 async function updateSubtitlesUI(group) {
     const enText = group.map(s => s.text).join(' ');
     subtitleEnElem.textContent = enText;
@@ -127,7 +159,7 @@ async function updateSubtitlesUI(group) {
 
     subtitleTrElem.textContent = 'Translating...';
     try {
-        // Using a free, public translation API
+        // Using a free, public translation API. Handles errors gracefully.
         const transResponse = await axios.get(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(enText)}&langpair=en|${targetLang}`);
         if (transResponse.data && transResponse.data.responseData) {
             const translatedText = transResponse.data.responseData.translatedText;
@@ -135,15 +167,15 @@ async function updateSubtitlesUI(group) {
             subtitleTrElem.lang = targetLang;
             subtitleTrElem.dir = ['ar', 'fa', 'he', 'ur'].includes(targetLang) ? 'rtl' : 'ltr';
         } else {
-            throw new Error('Invalid translation response');
+            throw new Error('Invalid translation API response');
         }
     } catch (error) {
-        console.error('Translation error:', error);
-        subtitleTrElem.textContent = '(Translation not available)';
+        console.error('Translation API error:', error);
+        subtitleTrElem.textContent = '(Translation failed)'; // Graceful failure
     }
 }
 
-// --- Event Listeners for Controls ---
+// --- 6. Event Listeners for Controls ---
 nextBtn.addEventListener('click', () => {
     currentIndex += groupSize;
     playCurrentGroup();
@@ -158,69 +190,62 @@ repeatBtn.addEventListener('click', () => {
     playCurrentGroup();
 });
 
-
-
 sentenceGroupSelect.addEventListener('change', (e) => {
     groupSize = parseInt(e.target.value, 10);
 });
 
-// --- Utility Functions ---
+// --- 7. Utility Functions ---
 function extractVideoId(url) {
-    // This new regex handles standard links, short links (youtu.be), and shorts links.
+    // Handles standard, short, and shorts links
     const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
     const match = url.match(regex);
     return match ? match[1] : null;
 }
 
 function showLoading(isLoading) {
-    if (isLoading) {
-        loadingIndicator.classList.remove('hidden');
-        loadBtn.disabled = true;
-    } else {
-        loadingIndicator.classList.add('hidden');
-        loadBtn.disabled = false;
-    }
+    loadingIndicator.classList.toggle('hidden', !isLoading);
+    loadBtn.disabled = isLoading;
 }
 
 function parseSrt(data) {
-    const srtRegex = /(\d+)\s*(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\s*([\s\S]*?)(?=\n\n|\n*$)/g;
+    const srtRegex = /(\d+)\s*(\d{2}:\d{2}:\d{2}[,.]\d{3}) --> (\d{2}:\d{2}:\d{2}[,.]\d{3})\s*([\s\S]*?)(?=\n\n|\n*$)/g;
     let match;
     const result = [];
     while ((match = srtRegex.exec(data)) !== null) {
         result.push({
             start: timeToSeconds(match[2]),
             end: timeToSeconds(match[3]),
-            text: match[4].replace(/\n/g, ' ').trim()
+            text: match[4].replace(/<[^>]*>/g, "").replace(/\n/g, ' ').trim()
         });
     }
     return result;
 }
 
 function timeToSeconds(time) {
-    const parts = time.split(/[:,]/);
+    const parts = time.replace(',', '.').split(/[:.]/);
     return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10) + parseInt(parts[3], 10) / 1000;
 }
 
-// --- Stats Logic ---
+// --- 8. Stats Logic ---
 function updateVisitorCount() {
-    // This is a simple simulation. Real stats need a backend.
-    let visitors = localStorage.getItem('visitorCount') || 0;
+    // Simple stats using browser's localStorage. Not a true unique visitor count.
+    let visitors = localStorage.getItem('visitorCount_shadowingTool') || 0;
     visitors = parseInt(visitors) + 1;
-    localStorage.setItem('visitorCount', visitors);
+    localStorage.setItem('visitorCount_shadowingTool', visitors);
     if (visitorCountElem) visitorCountElem.textContent = visitors;
 }
 
 function updateVideoCount() {
-    let videos = localStorage.getItem('videoCount') || 0;
+    let videos = localStorage.getItem('videoCount_shadowingTool') || 0;
     videos = parseInt(videos) + 1;
-    localStorage.setItem('videoCount', videos);
+    localStorage.setItem('videoCount_shadowingTool', videos);
     if (videoCountElem) videoCountElem.textContent = videos;
 }
 
-// --- Initial Load ---
+// --- 9. Initial App Load ---
 document.addEventListener('DOMContentLoaded', () => {
     groupSize = parseInt(sentenceGroupSelect.value, 10);
     updateVisitorCount();
-    const storedVideos = localStorage.getItem('videoCount') || 0;
+    const storedVideos = localStorage.getItem('videoCount_shadowingTool') || 0;
     if (videoCountElem) videoCountElem.textContent = storedVideos;
 });
