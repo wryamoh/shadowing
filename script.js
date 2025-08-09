@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 1.1 - ROBUST)
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 1.2 - STABLE PROXY)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Improved subtitle fetching logic and error handling.
+// Changelog: Switched to a more reliable, no-activation-needed CORS proxy.
 // =================================================================
 
 // --- 1. DOM Element Connections ---
@@ -60,17 +60,20 @@ loadBtn.addEventListener('click', async () => {
         
     } catch (error) {
         console.error('Critical error during video load process:', error);
-        alert('A critical error occurred. Please check the browser console (F12) for details, and ensure the CORS proxy is active.');
+        alert('A critical error occurred. Please check the browser console (F12) for details.');
         showLoading(false);
     }
 });
 
 async function fetchSubtitles(videoId, langCode) {
-    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+    // Using a more reliable, no-activation-needed CORS proxy
+    const proxyUrl = 'https://api.allorigins.win/raw?url=';
     const subtitlesUrl = `https://www.youtube.com/api/timedtext?lang=${langCode}&v=${videoId}&fmt=srv3`;
     
     try {
-        const response = await axios.get(proxyUrl + subtitlesUrl, { timeout: 10000 });
+        // The URL must be encoded for the new proxy
+        const response = await axios.get(proxyUrl + encodeURIComponent(subtitlesUrl), { timeout: 15000 }); // Increased timeout
+        
         if (response.status === 200 && response.data) {
             const parsedSubs = parseSrt(response.data);
             return parsedSubs.length > 0 ? parsedSubs : null;
@@ -88,7 +91,6 @@ function onYouTubeIframeAPIReady() {}
 function setupPlayer(videoId) {
     if (player) {
         player.loadVideoById(videoId);
-        // Reset UI for new video
         playerContainer.classList.add('hidden');
         showLoading(true);
     } else {
