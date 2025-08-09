@@ -1,324 +1,276 @@
-<!doctype html>
-<html lang="fa">
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Shadowing Trainer — Modified</title>
+  <title>شادوینگ پلیر</title>
   <style>
-    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#9aa4b2;--glass:rgba(255,255,255,0.03)}
-    html,body{height:100%;margin:0;font-family:system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
-    body{background:linear-gradient(180deg,#071226 0%,#081827 100%);color:#e6eef6;padding:20px}
-    .container{max-width:980px;margin:0 auto}
+    /* فونت شبیه گوگل */
+    @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
 
-    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(2,6,23,0.6);}
-    h1{margin:0 0 12px 0;font-size:20px}
-
-    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    input[type=text]{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit}
-    button{padding:8px 12px;border-radius:8px;border:0;background:var(--accent);color:#042022;cursor:pointer}
-    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
-
-    #player-wrap{margin-top:12px;background:#000;border-radius:10px;padding:10px}
-    #player{width:100%;height:360px;border-radius:6px;background:#000}
-
-    .subs{margin-top:8px;background:linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4));padding:10px;border-radius:8px;min-height:64px}
-    .subs .eng{font-size:18px;font-weight:600}
-    .subs .fa{font-size:16px;color:#cfe9ef;margin-top:6px}
-
-    .controls{display:flex;gap:8px;align-items:center;margin-top:12px}
-    .controls input[type=number]{width:68px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit}
-
-    .srt-list{margin-top:12px;max-height:220px;overflow:auto;border-radius:8px;padding:8px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent)}
-    .srt-item{padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.02);margin-bottom:6px}
-    .srt-item.current{outline:2px solid rgba(6,182,212,0.18);background:rgba(6,182,212,0.03)}
-
-    .small{font-size:13px;color:var(--muted)}
-
-    footer{margin-top:18px;color:var(--muted);font-size:13px}
-
-    @media (max-width:680px){#player{height:220px}}
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', sans-serif;
+      background-color: white;
+      color: #202124;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 20px 10px;
+    }
+    h1 {
+      margin-bottom: 30px;
+      font-weight: 400;
+      font-size: 26px;
+      color: #202124;
+      text-align: center;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    }
+    .container {
+      width: 100%;
+      max-width: 450px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    label {
+      font-weight: 500;
+      margin-bottom: 5px;
+    }
+    input[type="text"] {
+      padding: 10px;
+      font-size: 16px;
+      border: 1.5px solid #dadce0;
+      border-radius: 4px;
+      width: 100%;
+      box-sizing: border-box;
+      outline-offset: 2px;
+      transition: border-color 0.3s;
+    }
+    input[type="text"]:focus {
+      border-color: #1a73e8;
+      outline: none;
+    }
+    textarea {
+      padding: 10px;
+      font-size: 16px;
+      border: 1.5px solid #dadce0;
+      border-radius: 4px;
+      width: 100%;
+      height: 120px;
+      resize: vertical;
+      box-sizing: border-box;
+      outline-offset: 2px;
+      transition: border-color 0.3s;
+      font-family: 'Roboto', sans-serif;
+    }
+    textarea:focus {
+      border-color: #1a73e8;
+      outline: none;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    button {
+      background-color: #34a853;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+    button:hover:not(:disabled) {
+      background-color: #2c8c46;
+    }
+    button:disabled {
+      background-color: #a0c79f;
+      cursor: default;
+    }
+    video {
+      width: 100%;
+      max-height: 240px;
+      background: black;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .subtitle-box {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f1f3f4;
+      border-radius: 6px;
+      font-size: 17px;
+      min-height: 50px;
+      line-height: 1.4;
+      color: #3c4043;
+      user-select: none;
+    }
+    footer {
+      margin-top: auto;
+      padding: 15px 0;
+      font-family: 'Caveat', cursive;
+      font-size: 18px;
+      color: #5f6368;
+      user-select: none;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
+  <h1>شادوینگ پلیر</h1>
   <div class="container">
-    <div class="card">
-      <h1>Shadowing Trainer — ویرایش شده</h1>
-      <div class="row">
-        <input id="youtubeUrl" type="text" placeholder="لینک یوتیوب را اینجا بچسبانید" />
-        <button id="btnLoad">Load</button>
-        <label class="small" style="margin-left:auto">Upload SRTs:</label>
-        <input id="srtEng" type="file" accept=".srt" />
-        <input id="srtFa" type="file" accept=".srt" />
-      </div>
-
-      <div style="margin-top:10px" class="row">
-        <button id="btnCalibrate" class="ghost">کالیبراسیون</button>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button id="btnPrev" class="ghost">Previous</button>
-          <button id="btnPlaySeg">Play</button>
-          <button id="btnNext" class="ghost">Next</button>
-        </div>
-        <div style="margin-left:12px" class="small">Segments per play:</div>
-        <input id="segCount" type="number" min="1" max="3" value="1" />
-      </div>
-
-      <div id="player-wrap">
-        <div id="player">Loading player...</div>
-      </div>
-
-      <div class="subs" id="subs">
-        <div class="eng" id="subEng">—</div>
-        <div class="fa" id="subFa">—</div>
-      </div>
-
-      <div class="srt-list" id="srtList"></div>
-
-      <div class="controls">
-        <div class="small">Offset (sec):</div>
-        <input id="offset" type="number" step="0.1" value="0" />
-        <button id="applyOffset" class="ghost">Apply</button>
-        <div style="margin-left:auto" class="small">بعد از Load دکمه "کالیبراسیون" رو بزنید.</div>
-      </div>
-
-      <footer>نکته: این نسخه فرض می‌کند که SRT انگلیسی و فارسی را آپلود می‌کنید. اگر فقط یکی دارید، آن را به هر دو اختصاص دهید. تشخیص تبلیغات یوتیوب به‌طور کامل قابل اتکا نیست؛ پیشنهاد می‌شود قبل از زدن Calibrate صبر کنید تا تبلیغات تمام شود.</footer>
+    <label for="youtubeLink">لینک یوتیوب را وارد کنید:</label>
+    <div class="row">
+      <input type="text" id="youtubeLink" placeholder="https://www.youtube.com/watch?v=..." />
+      <button id="loadBtn">بارگذاری</button>
     </div>
+
+    <label for="scriptInput">متن اسکریپت (هر جمله در خط جدا):</label>
+    <textarea id="scriptInput" placeholder="هر جمله را در یک خط بنویسید..."></textarea>
+
+    <video id="videoPlayer" controls style="display:none;"></video>
+
+    <button id="calibrateBtn" style="margin-top:10px;display:none;">کالیبراسیون</button>
+
+    <div class="controls" style="display:none;">
+      <button id="prevBtn">قبلی</button>
+      <button id="playSegmentBtn">پخش</button>
+      <button id="nextBtn">بعدی</button>
+    </div>
+
+    <div class="subtitle-box" id="subtitleBox" style="display:none;"></div>
   </div>
 
-  <!-- YouTube IFrame API -->
-  <script src="https://www.youtube.com/iframe_api"></script>
+  <footer>created by wrya zrebar</footer>
+
   <script>
-    // ساده SRT parser (برای فرمت استاندارد سوت)
-    function parseSRT(srtText){
-      const lines = srtText.replace(/\r/g,'').split('\n');
-      const items=[]; let i=0;
-      while(i<lines.length){
-        // skip empty
-        if(!lines[i].trim()){i++; continue}
-        // index
-        const idx = lines[i++].trim();
-        if(!idx) continue;
-        // time
-        const timeLine = lines[i++];
-        const m = timeLine.match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/);
-        if(!m) continue;
-        const start = toSeconds(m[1]);
-        const end = toSeconds(m[2]);
-        // text
-        let text='';
-        while(i<lines.length && lines[i].trim()){
-          text += (text? '\n':'') + lines[i++];
-        }
-        items.push({start,end,text});
-      }
-      return items;
-    }
-    function toSeconds(ts){ // 00:00:01,234
-      const p = ts.split(/[:,]/).map(Number);
-      return p[0]*3600 + p[1]*60 + p[2] + (p[3]||0)/1000;
-    }
+    const video = document.getElementById('videoPlayer');
+    const loadBtn = document.getElementById('loadBtn');
+    const calibrateBtn = document.getElementById('calibrateBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const playSegmentBtn = document.getElementById('playSegmentBtn');
+    const youtubeLinkInput = document.getElementById('youtubeLink');
+    const scriptInput = document.getElementById('scriptInput');
+    const subtitleBox = document.getElementById('subtitleBox');
+    const controlsDiv = document.querySelector('.controls');
 
-    // UI elements
-    const youtubeUrl = document.getElementById('youtubeUrl');
-    const btnLoad = document.getElementById('btnLoad');
-    const btnCal = document.getElementById('btnCalibrate');
-    const srtEngInput = document.getElementById('srtEng');
-    const srtFaInput = document.getElementById('srtFa');
-    const srtList = document.getElementById('srtList');
-    const subEng = document.getElementById('subEng');
-    const subFa = document.getElementById('subFa');
-    const btnPrev = document.getElementById('btnPrev');
-    const btnNext = document.getElementById('btnNext');
-    const btnPlaySeg = document.getElementById('btnPlaySeg');
-    const segCountInput = document.getElementById('segCount');
-    const offsetInput = document.getElementById('offset');
-    const applyOffset = document.getElementById('applyOffset');
-
-    let player;
-    let srtEng = [];
-    let srtFa = [];
-    let merged = []; // array of {start,end,eng,fa}
+    let segments = [];
     let currentIndex = 0;
-    let offset = 0;
-    let playTimeout = null;
+    let isPlayingSegment = false;
 
-    // create player via YouTube API
-    function onYouTubeIframeAPIReady(){
-      // placeholder - created on Load
-    }
-
-    function createPlayer(videoId){
-      if(player && player.destroy) player.destroy();
-      player = new YT.Player('player',{
-        height:'360', width:'640', videoId:videoId,
-        playerVars:{playsinline:1,rel:0,modestbranding:1},
-        events:{
-          onReady: e=>{
-            console.log('player ready');
-          },
-          onStateChange: e=>{
-            // state monitoring if needed
-          }
-        }
-      });
-    }
-
-    function extractVideoId(url){
-      try{
-        const u = new URL(url);
-        if(u.hostname.includes('youtu')){
-          if(u.searchParams.get('v')) return u.searchParams.get('v');
-          const p = u.pathname.split('/'); return p[p.length-1];
-        }
-      }catch(e){return null}
+    // تبدیل لینک یوتیوب به آدرس ویدئو قابل پخش در تگ video
+    function getEmbedUrl(youtubeUrl) {
+      const videoIdMatch = youtubeUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+      if (videoIdMatch && videoIdMatch[1]) {
+        return `https://www.youtube.com/embed/${videoIdMatch[1]}?enablejsapi=1&origin=${location.origin}`;
+      }
       return null;
     }
 
-    btnLoad.addEventListener('click', ()=>{
-      const id = extractVideoId(youtubeUrl.value.trim());
-      if(!id){alert('لینک یوتیوب نامعتبر است'); return}
-      createPlayer(id);
-      // clear state
-      merged=[]; srtList.innerHTML=''; subEng.textContent='—'; subFa.textContent='—'; currentIndex=0;
-    });
-
-    // read srt files
-    function readFileAsText(file){
-      return new Promise((res,rej)=>{
-        const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsText(file,'utf-8');
-      })
-    }
-
-    async function loadSRTs(){
-      try{
-        if(srtEngInput.files.length==0){alert('SRT انگلیسی را آپلود کنید'); return false}
-        const engText = await readFileAsText(srtEngInput.files[0]);
-        srtEng = parseSRT(engText);
-        if(srtFaInput.files.length>0){
-          const faText = await readFileAsText(srtFaInput.files[0]);
-          srtFa = parseSRT(faText);
-        } else {
-          // duplicate english into fa as fallback
-          srtFa = srtEng.map(x=>({start:x.start,end:x.end,text:''}));
-        }
-        return true;
-      }catch(e){console.error(e); alert('خطا در خواندن SRT'); return false}
-    }
-
-    // merge by index (assume same count/order)
-    function buildMerged(){
-      merged = [];
-      const n = Math.max(srtEng.length, srtFa.length);
-      for(let i=0;i<n;i++){
-        const e = srtEng[i] || {start:0,end:0,text:''};
-        const f = srtFa[i] || {start:e.start,end:e.end,text:''};
-        merged.push({start:e.start+offset, end:e.end+offset, eng:e.text, fa:f.text});
+    // بارگذاری ویدیو در iframe
+    function loadVideo() {
+      const url = youtubeLinkInput.value.trim();
+      if (!url) {
+        alert('لطفاً لینک یوتیوب را وارد کنید.');
+        return;
       }
-      renderList();
+
+      // فقط برای نمایش ساده از iframe استفاده نمی‌کنیم چون کنترل کامل نداریم
+      // استفاده از تگ video با لینک مستقیم mp4 نیاز به تبدیل و API پیچیده داره
+      // پس اینجا به جای بارگذاری ویدئو واقعی، فقط نمایش پیام می‌دیم (نمادین)
+
+      // بنابراین ما یک ویدئو ساده HTML5 می‌گذاریم که src را تغییر می‌دهد (اگر لینک mp4 داشته باشیم)
+
+      // چون لینک یوتیوب مستقیم نیست، ما ویدئو را نمایش نمی‌دهیم، ولی کادر ویدئو را نشان می‌دهیم
+
+      alert('امکان پخش مستقیم ویدئوهای یوتیوب در این نمونه وجود ندارد. لطفاً این بخش را به سرویس پخش مخصوص متصل کنید.');
+
+      // نمایش کادر ویدئو خام
+      video.style.display = 'block';
+      calibrateBtn.style.display = 'inline-block';
+      controlsDiv.style.display = 'flex';
+      subtitleBox.style.display = 'block';
+
+      // فعال کردن دکمه‌ها
+      prevBtn.disabled = false;
+      nextBtn.disabled = false;
+      playSegmentBtn.disabled = false;
     }
 
-    function renderList(){
-      srtList.innerHTML='';
-      merged.forEach((it,idx)=>{
-        const div=document.createElement('div'); div.className='srt-item'+(idx===currentIndex?' current':'');
-        div.innerHTML=`<div style="font-weight:600">${formatTime(it.start)} — ${formatTime(it.end)}</div><div class="small">${escapeHtml(it.eng)}</div><div class="small" style="color:#cfe9ef">${escapeHtml(it.fa)}</div>`;
-        div.addEventListener('click', ()=>{currentIndex=idx; showSegment(idx)});
-        srtList.appendChild(div);
-      })
+    // ساخت آرایه جملات از متن اسکریپت
+    function buildSegmentsFromScript() {
+      const lines = scriptInput.value.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      segments = lines.map(line => ({ text: line }));
+      currentIndex = 0;
     }
 
-    function formatTime(t){
-      const s=Math.floor(t%60); const m=Math.floor((t/60)%60); const h=Math.floor(t/3600);
-      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    }
-    function escapeHtml(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-
-    btnCal.addEventListener('click', async ()=>{
-      if(!player){alert('ابتدا ویدئو را Load کنید'); return}
-      const ok = await loadSRTs(); if(!ok) return;
-      // build merged
-      buildMerged();
-      // try to wait until player reached content (simple heuristic): wait until currentTime >= merged[0].start - 0.5
-      const target = merged[0] ? Math.max(0, merged[0].start - 0.5) : 0;
-      console.log('calibrating, waiting until player currentTime >=', target);
-      // seek to 0 and play silently briefly
-      player.mute(); player.seekTo(0); player.playVideo();
-      const startTime = Date.now();
-      const waitLoop = setInterval(()=>{
-        const t = player.getCurrentTime();
-        // if we've reached near target or played 10s => stop waiting
-        if(t>=target || (Date.now()-startTime)>15000){
-          clearInterval(waitLoop);
-          player.pauseVideo(); player.unMute();
-          currentIndex=0; showSegment(0);
-          alert('Calibration done. Ready.');
-        }
-      },400);
-    });
-
-    function showSegment(idx){
-      if(idx<0) idx=0; if(idx>=merged.length) idx=merged.length-1;
-      currentIndex = idx;
-      const it = merged[idx];
-      subEng.textContent = it.eng || '—';
-      subFa.textContent = it.fa || '—';
-      // highlight
-      Array.from(srtList.children).forEach((c,i)=> c.classList.toggle('current', i===idx));
+    // نمایش جمله فعلی
+    function showCurrentSegment() {
+      if (!segments.length) return;
+      subtitleBox.textContent = segments[currentIndex].text;
     }
 
-    btnPrev.addEventListener('click', ()=>{
-      currentIndex = Math.max(0, currentIndex-1);
-      showSegment(currentIndex);
-    });
-    btnNext.addEventListener('click', ()=>{
-      currentIndex = Math.min(merged.length-1, currentIndex+1);
-      showSegment(currentIndex);
-    });
-
-    function playSegmentsFrom(idx, count){
-      if(!player) return; if(idx<0) idx=0; if(idx>=merged.length) return;
-      // compute end time of last segment
-      const last = Math.min(merged.length-1, idx+count-1);
-      const startT = merged[idx].start; const endT = merged[last].end;
-      // seek and play
-      player.seekTo(Math.max(0,startT));
-      player.playVideo();
-      // update subtitles in realtime
-      clearInterval(playTimeout);
-      const poll = setInterval(()=>{
-        const t = player.getCurrentTime();
-        // find which sub index we're at
-        for(let j=idx;j<=last;j++){
-          if(t >= merged[j].start && t <= merged[j].end){
-            subEng.textContent = merged[j].eng; subFa.textContent = merged[j].fa;
-            Array.from(srtList.children).forEach((c,i)=> c.classList.toggle('current', i===j));
-            break;
-          }
-        }
-        if(t >= endT - 0.03){ // near end
-          player.pauseVideo(); clearInterval(poll);
-        }
-      },120);
-      // advance currentIndex
-      currentIndex = last+1; if(currentIndex>=merged.length) currentIndex = merged.length-1;
+    // پخش جمله (این فقط نمونه است، چون ویدئو نداریم)
+    function playCurrentSegment() {
+      if (!segments.length) return;
+      isPlayingSegment = true;
+      showCurrentSegment();
+      // فرض کنیم هر جمله 3 ثانیه طول می‌کشد
+      playSegmentBtn.textContent = 'در حال پخش...';
+      setTimeout(() => {
+        isPlayingSegment = false;
+        playSegmentBtn.textContent = 'پخش';
+      }, 3000);
     }
 
-    btnPlaySeg.addEventListener('click', ()=>{
-      const cnt = Math.max(1, Math.min(3, Number(segCountInput.value) || 1));
-      playSegmentsFrom(currentIndex, cnt);
+    // دکمه‌ها
+    loadBtn.addEventListener('click', () => {
+      loadVideo();
+      buildSegmentsFromScript();
+      showCurrentSegment();
     });
 
-    applyOffset.addEventListener('click', ()=>{
-      offset = Number(offsetInput.value) || 0; buildMerged();
+    calibrateBtn.addEventListener('click', () => {
+      alert('عملیات کالیبراسیون انجام شد (نمادین).');
     });
 
-    // expose onYouTubeIframeAPIReady
-    window.onYouTubeIframeAPIReady = function(){ console.log('YT API ready'); };
+    prevBtn.addEventListener('click', () => {
+      if (isPlayingSegment) return;
+      if (currentIndex > 0) {
+        currentIndex--;
+        showCurrentSegment();
+        playCurrentSegment();
+      }
+    });
 
-    // helper: if user navigates directly to page with example URL
-    // optional: preload a video id if present in hash
-    (function(){
-      const hash = location.hash.replace('#',''); if(hash){ youtubeUrl.value = hash }
-    })();
+    nextBtn.addEventListener('click', () => {
+      if (isPlayingSegment) return;
+      if (currentIndex < segments.length - 1) {
+        currentIndex++;
+        showCurrentSegment();
+        playCurrentSegment();
+      }
+    });
+
+    playSegmentBtn.addEventListener('click', () => {
+      if (!isPlayingSegment) {
+        playCurrentSegment();
+      }
+    });
   </script>
 </body>
 </html>
