@@ -1,37 +1,33 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>شادوینگ پلیر</title>
+  <title>Shadowing Player</title>
   <style>
-    /* فونت شبیه گوگل */
     @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
-
     body {
-      margin: 0;
-      padding: 0;
+      margin:0; padding:20px 10px;
       font-family: 'Roboto', sans-serif;
-      background-color: white;
+      background: white;
       color: #202124;
       display: flex;
       flex-direction: column;
       min-height: 100vh;
       align-items: center;
       justify-content: flex-start;
-      padding: 20px 10px;
     }
     h1 {
-      margin-bottom: 30px;
       font-weight: 400;
-      font-size: 26px;
-      color: #202124;
+      font-size: 28px;
+      margin-bottom: 30px;
       text-align: center;
       text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+      color: #202124;
     }
     .container {
       width: 100%;
-      max-width: 450px;
+      max-width: 480px;
       display: flex;
       flex-direction: column;
       gap: 15px;
@@ -94,9 +90,9 @@
       background-color: #a0c79f;
       cursor: default;
     }
-    video {
+    #player {
       width: 100%;
-      max-height: 240px;
+      height: 270px;
       background: black;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.15);
@@ -117,6 +113,8 @@
       line-height: 1.4;
       color: #3c4043;
       user-select: none;
+      text-align: center;
+      font-weight: 500;
     }
     footer {
       margin-top: auto;
@@ -130,25 +128,25 @@
   </style>
 </head>
 <body>
-  <h1>شادوینگ پلیر</h1>
+  <h1>Shadowing Player</h1>
   <div class="container">
-    <label for="youtubeLink">لینک یوتیوب را وارد کنید:</label>
+    <label for="youtubeLink">Enter YouTube URL:</label>
     <div class="row">
       <input type="text" id="youtubeLink" placeholder="https://www.youtube.com/watch?v=..." />
-      <button id="loadBtn">بارگذاری</button>
+      <button id="loadBtn">Load</button>
     </div>
 
-    <label for="scriptInput">متن اسکریپت (هر جمله در خط جدا):</label>
-    <textarea id="scriptInput" placeholder="هر جمله را در یک خط بنویسید..."></textarea>
+    <label for="scriptInput">Script (one sentence per line):</label>
+    <textarea id="scriptInput" placeholder="Write each sentence on a separate line..."></textarea>
 
-    <video id="videoPlayer" controls style="display:none;"></video>
+    <div id="player"></div>
 
-    <button id="calibrateBtn" style="margin-top:10px;display:none;">کالیبراسیون</button>
+    <button id="calibrateBtn" style="margin-top:10px; display:none;">Calibrate</button>
 
     <div class="controls" style="display:none;">
-      <button id="prevBtn">قبلی</button>
-      <button id="playSegmentBtn">پخش</button>
-      <button id="nextBtn">بعدی</button>
+      <button id="prevBtn">Previous</button>
+      <button id="playSegmentBtn">Play</button>
+      <button id="nextBtn">Next</button>
     </div>
 
     <div class="subtitle-box" id="subtitleBox" style="display:none;"></div>
@@ -157,98 +155,130 @@
   <footer>created by wrya zrebar</footer>
 
   <script>
-    const video = document.getElementById('videoPlayer');
-    const loadBtn = document.getElementById('loadBtn');
-    const calibrateBtn = document.getElementById('calibrateBtn');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const playSegmentBtn = document.getElementById('playSegmentBtn');
-    const youtubeLinkInput = document.getElementById('youtubeLink');
-    const scriptInput = document.getElementById('scriptInput');
-    const subtitleBox = document.getElementById('subtitleBox');
-    const controlsDiv = document.querySelector('.controls');
-
+    let player;
     let segments = [];
     let currentIndex = 0;
     let isPlayingSegment = false;
+    let segmentDuration = 3000; // default 3 seconds per sentence
 
-    // تبدیل لینک یوتیوب به آدرس ویدئو قابل پخش در تگ video
-    function getEmbedUrl(youtubeUrl) {
-      const videoIdMatch = youtubeUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
-      if (videoIdMatch && videoIdMatch[1]) {
-        return `https://www.youtube.com/embed/${videoIdMatch[1]}?enablejsapi=1&origin=${location.origin}`;
-      }
-      return null;
+    // Load YouTube IFrame Player API asynchronously
+    let tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(tag);
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        height: '270',
+        width: '100%',
+        videoId: '',
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange
+        },
+        playerVars: {
+          modestbranding: 1,
+          rel: 0,
+          controls: 1,
+          disablekb: 1,
+          fs: 0,
+          iv_load_policy: 3,
+          origin: window.location.origin
+        }
+      });
     }
 
-    // بارگذاری ویدیو در iframe
+    function onPlayerReady(event) {
+      // Player ready, disable controls initially
+      disableControls(true);
+    }
+
+    function onPlayerStateChange(event) {
+      if (event.data == YT.PlayerState.ENDED || event.data == YT.PlayerState.PAUSED) {
+        if (isPlayingSegment) {
+          // If segment playing, move to next or stop
+          isPlayingSegment = false;
+          updatePlayButton(false);
+        }
+      }
+    }
+
+    function disableControls(disable) {
+      document.getElementById('prevBtn').disabled = disable;
+      document.getElementById('nextBtn').disabled = disable;
+      document.getElementById('playSegmentBtn').disabled = disable;
+      document.getElementById('calibrateBtn').disabled = disable;
+    }
+
+    function extractVideoId(url) {
+      const regex = /(?:v=|\/)([0-9A-Za-z_-]{11})/;
+      const match = url.match(regex);
+      return match ? match[1] : null;
+    }
+
     function loadVideo() {
-      const url = youtubeLinkInput.value.trim();
-      if (!url) {
-        alert('لطفاً لینک یوتیوب را وارد کنید.');
+      const url = document.getElementById('youtubeLink').value.trim();
+      const videoId = extractVideoId(url);
+      if (!videoId) {
+        alert('Please enter a valid YouTube URL.');
         return;
       }
+      player.loadVideoById(videoId);
+      document.getElementById('calibrateBtn').style.display = 'inline-block';
+      document.querySelector('.controls').style.display = 'flex';
+      document.getElementById('subtitleBox').style.display = 'block';
 
-      // فقط برای نمایش ساده از iframe استفاده نمی‌کنیم چون کنترل کامل نداریم
-      // استفاده از تگ video با لینک مستقیم mp4 نیاز به تبدیل و API پیچیده داره
-      // پس اینجا به جای بارگذاری ویدئو واقعی، فقط نمایش پیام می‌دیم (نمادین)
-
-      // بنابراین ما یک ویدئو ساده HTML5 می‌گذاریم که src را تغییر می‌دهد (اگر لینک mp4 داشته باشیم)
-
-      // چون لینک یوتیوب مستقیم نیست، ما ویدئو را نمایش نمی‌دهیم، ولی کادر ویدئو را نشان می‌دهیم
-
-      alert('امکان پخش مستقیم ویدئوهای یوتیوب در این نمونه وجود ندارد. لطفاً این بخش را به سرویس پخش مخصوص متصل کنید.');
-
-      // نمایش کادر ویدئو خام
-      video.style.display = 'block';
-      calibrateBtn.style.display = 'inline-block';
-      controlsDiv.style.display = 'flex';
-      subtitleBox.style.display = 'block';
-
-      // فعال کردن دکمه‌ها
-      prevBtn.disabled = false;
-      nextBtn.disabled = false;
-      playSegmentBtn.disabled = false;
+      buildSegmentsFromScript();
+      showCurrentSegment();
+      disableControls(false);
     }
 
-    // ساخت آرایه جملات از متن اسکریپت
     function buildSegmentsFromScript() {
-      const lines = scriptInput.value.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const text = document.getElementById('scriptInput').value.trim();
+      if (!text) {
+        segments = [];
+        return;
+      }
+      const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
       segments = lines.map(line => ({ text: line }));
       currentIndex = 0;
     }
 
-    // نمایش جمله فعلی
     function showCurrentSegment() {
       if (!segments.length) return;
-      subtitleBox.textContent = segments[currentIndex].text;
+      document.getElementById('subtitleBox').textContent = segments[currentIndex].text;
     }
 
-    // پخش جمله (این فقط نمونه است، چون ویدئو نداریم)
     function playCurrentSegment() {
-      if (!segments.length) return;
+      if (!segments.length || !player) return;
       isPlayingSegment = true;
       showCurrentSegment();
-      // فرض کنیم هر جمله 3 ثانیه طول می‌کشد
-      playSegmentBtn.textContent = 'در حال پخش...';
+
+      // For demo, play 3 seconds from current time, then pause
+      // In real app you would sync with actual subtitle timestamps
+
+      player.playVideo();
+
       setTimeout(() => {
+        player.pauseVideo();
         isPlayingSegment = false;
-        playSegmentBtn.textContent = 'پخش';
-      }, 3000);
+        updatePlayButton(false);
+      }, segmentDuration);
     }
 
-    // دکمه‌ها
-    loadBtn.addEventListener('click', () => {
+    function updatePlayButton(isPlaying) {
+      const btn = document.getElementById('playSegmentBtn');
+      btn.textContent = isPlaying ? 'Playing...' : 'Play';
+    }
+
+    document.getElementById('loadBtn').addEventListener('click', () => {
       loadVideo();
-      buildSegmentsFromScript();
-      showCurrentSegment();
     });
 
-    calibrateBtn.addEventListener('click', () => {
-      alert('عملیات کالیبراسیون انجام شد (نمادین).');
+    document.getElementById('calibrateBtn').addEventListener('click', () => {
+      alert('Calibration done (demo).');
     });
 
-    prevBtn.addEventListener('click', () => {
+    document.getElementById('prevBtn').addEventListener('click', () => {
       if (isPlayingSegment) return;
       if (currentIndex > 0) {
         currentIndex--;
@@ -257,7 +287,7 @@
       }
     });
 
-    nextBtn.addEventListener('click', () => {
+    document.getElementById('nextBtn').addEventListener('click', () => {
       if (isPlayingSegment) return;
       if (currentIndex < segments.length - 1) {
         currentIndex++;
@@ -266,7 +296,7 @@
       }
     });
 
-    playSegmentBtn.addEventListener('click', () => {
+    document.getElementById('playSegmentBtn').addEventListener('click', () => {
       if (!isPlayingSegment) {
         playCurrentSegment();
       }
