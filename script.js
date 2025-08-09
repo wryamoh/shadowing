@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR VIDEO SHADOWING TOOL (VERSION 7.1 - FINAL & STABLE)
+// FINAL SCRIPT FOR VIDEO SHADOWING TOOL (VERSION 7.2 - PRECISION SEEKING FIX)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Corrected event listener logic and added video loading progress bar.
+// Changelog: Implemented event-driven seeking to ensure playback starts at the exact timestamp.
 // =================================================================
 
 // --- Global State Variables ---
@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const prevBtn = document.getElementById('prev-btn');
     const repeatBtn = document.getElementById('repeat-btn');
     const sentenceGroupSelect = document.getElementById('sentence-group');
-    const progressBar = document.getElementById('progress-bar');
     
     // Attach the main event listener for the "Start Shadowing" button
     loadBtn.addEventListener('click', async () => {
@@ -57,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             videoPlayer.onprogress = () => {
+                const progressBar = document.getElementById('progress-bar');
                 if (videoPlayer.duration > 0) {
                     const bufferedEnd = videoPlayer.buffered.length > 0 ? videoPlayer.buffered.end(videoPlayer.buffered.length - 1) : 0;
                     const progress = (bufferedEnd / videoPlayer.duration) * 100;
@@ -108,16 +108,24 @@ function playCurrentGroup() {
 
     updateSubtitlesUI(group);
 
+    // --- NEW PRECISION SEEKING LOGIC ---
+    // 1. Define what to do after the seek is complete
+    const onSeeked = () => {
+        videoPlayer.play();
+        const duration = (end - videoPlayer.currentTime) * 1000; // Calculate duration from the actual current time
+
+        if (duration >= 0) {
+            playbackTimer = setTimeout(() => {
+                videoPlayer.pause();
+            }, duration);
+        }
+        // 3. Remove the event listener so it doesn't fire again accidentally
+        videoPlayer.removeEventListener('seeked', onSeeked);
+    };
+
+    // 2. Add the event listener and then start the seek
+    videoPlayer.addEventListener('seeked', onSeeked);
     videoPlayer.currentTime = start;
-    videoPlayer.play();
-
-    const duration = (end - start) * 1000;
-
-    if (duration >= 0) {
-        playbackTimer = setTimeout(() => {
-            videoPlayer.pause();
-        }, duration);
-    }
 }
 
 async function updateSubtitlesUI(group) {
@@ -145,7 +153,6 @@ async function updateSubtitlesUI(group) {
 function showLoading(isLoading) { 
     document.getElementById('loading-indicator').classList.toggle('hidden', !isLoading);
     document.getElementById('load-btn').disabled = isLoading;
-    // Reset progress bar on new load
     document.getElementById('progress-bar').style.width = '0%';
 }
 function parseSrt(srtText) {
