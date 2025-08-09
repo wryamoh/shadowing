@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR VIDEO SHADOWING TOOL (VERSION 7.0 - FULLY OFFLINE)
+// FINAL SCRIPT FOR VIDEO SHADOWING TOOL (VERSION 7.1 - FINAL & STABLE)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Removed all YouTube dependencies. Tool now works with local video and SRT files.
+// Changelog: Corrected event listener logic and added video loading progress bar.
 // =================================================================
 
 // --- Global State Variables ---
@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const prevBtn = document.getElementById('prev-btn');
     const repeatBtn = document.getElementById('repeat-btn');
     const sentenceGroupSelect = document.getElementById('sentence-group');
+    const progressBar = document.getElementById('progress-bar');
     
     // Attach the main event listener for the "Start Shadowing" button
     loadBtn.addEventListener('click', async () => {
@@ -33,11 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoading(true);
         
         try {
-            // 1. Parse the user's SRT file
             const srtContent = await srtFile.text();
             const parsedSubtitles = parseSrt(srtContent);
 
-            if (!parsedSubtitles || parsedSubtitles.length === 0) {
+            if (!parsedSubtitles || !parsedSubtitles.length) {
                 alert('Could not parse any subtitles from the file. Please check the SRT format.');
                 showLoading(false);
                 return;
@@ -45,10 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subtitles = parsedSubtitles;
             currentIndex = 0;
 
-            // 2. Create a URL for the local video file to be used by the player
             const videoUrl = URL.createObjectURL(videoFile);
-
-            // 3. Load the video and prepare the player
             videoPlayer.src = videoUrl;
             videoPlayer.load();
             
@@ -56,11 +53,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 showLoading(false);
                 document.getElementById('player-container').classList.remove('hidden');
                 updateVideoCount();
-                playCurrentGroup(); // Play the first sentence automatically
+                playCurrentGroup();
             };
+            
+            videoPlayer.onprogress = () => {
+                if (videoPlayer.duration > 0) {
+                    const bufferedEnd = videoPlayer.buffered.length > 0 ? videoPlayer.buffered.end(videoPlayer.buffered.length - 1) : 0;
+                    const progress = (bufferedEnd / videoPlayer.duration) * 100;
+                    progressBar.style.width = `${progress}%`;
+                }
+            };
+
             videoPlayer.onerror = () => {
                 showLoading(false);
-                alert('Error loading video. The file format might not be supported by your browser.');
+                alert('Error loading video. The file format might not be supported.');
             };
 
         } catch (error) {
@@ -87,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function playCurrentGroup() {
     const videoPlayer = document.getElementById('video-player');
-    if (!videoPlayer || !subtitles || subtitles.length === 0) return;
+    if (!videoPlayer || !subtitles || !subtitles.length) return;
 
     if (currentIndex >= subtitles.length) currentIndex = subtitles.length - 1;
     if (currentIndex < 0) currentIndex = 0;
@@ -107,7 +113,7 @@ function playCurrentGroup() {
 
     const duration = (end - start) * 1000;
 
-    if (duration >= 0) { // Check for non-negative duration
+    if (duration >= 0) {
         playbackTimer = setTimeout(() => {
             videoPlayer.pause();
         }, duration);
@@ -139,6 +145,8 @@ async function updateSubtitlesUI(group) {
 function showLoading(isLoading) { 
     document.getElementById('loading-indicator').classList.toggle('hidden', !isLoading);
     document.getElementById('load-btn').disabled = isLoading;
+    // Reset progress bar on new load
+    document.getElementById('progress-bar').style.width = '0%';
 }
 function parseSrt(srtText) {
     const blocks = srtText.trim().replace(/\r\n/g, '\n').split(/\n\n/);
