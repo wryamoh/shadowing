@@ -1,7 +1,7 @@
 // =================================================================
-// FINAL SCRIPT FOR VIDEO SHADOWING TOOL (VERSION 7.2 - PRECISION SEEKING FIX)
+// FINAL SCRIPT FOR VIDEO SHADOWING TOOL (VERSION 7.3 - PRECISION SYNC ENGINE)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Implemented event-driven seeking to ensure playback starts at the exact timestamp.
+// Changelog: Implemented an active monitoring loop for seeking to guarantee precise playback start time and fix all timing bugs.
 // =================================================================
 
 // --- Global State Variables ---
@@ -9,6 +9,7 @@ let subtitles = [];
 let currentIndex = 0;
 let groupSize = 1;
 let playbackTimer;
+let seekingInterval; // New variable to manage the monitoring loop
 
 // --- Main App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -52,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showLoading(false);
                 document.getElementById('player-container').classList.remove('hidden');
                 updateVideoCount();
-                playCurrentGroup();
+                // Do not play automatically, wait for user's first command
             };
             
             videoPlayer.onprogress = () => {
@@ -98,7 +99,9 @@ function playCurrentGroup() {
     if (currentIndex >= subtitles.length) currentIndex = subtitles.length - 1;
     if (currentIndex < 0) currentIndex = 0;
 
+    // Clear any previous timers or monitoring loops
     clearTimeout(playbackTimer);
+    clearInterval(seekingInterval);
 
     const group = subtitles.slice(currentIndex, currentIndex + groupSize);
     if (group.length === 0) return;
@@ -108,24 +111,30 @@ function playCurrentGroup() {
 
     updateSubtitlesUI(group);
 
-    // --- NEW PRECISION SEEKING LOGIC ---
-    // 1. Define what to do after the seek is complete
-    const onSeeked = () => {
-        videoPlayer.play();
-        const duration = (end - videoPlayer.currentTime) * 1000; // Calculate duration from the actual current time
-
-        if (duration >= 0) {
-            playbackTimer = setTimeout(() => {
-                videoPlayer.pause();
-            }, duration);
-        }
-        // 3. Remove the event listener so it doesn't fire again accidentally
-        videoPlayer.removeEventListener('seeked', onSeeked);
-    };
-
-    // 2. Add the event listener and then start the seek
-    videoPlayer.addEventListener('seeked', onSeeked);
+    // --- NEW PRECISION SYNC ENGINE ---
+    videoPlayer.pause(); // Ensure video is paused before seeking
     videoPlayer.currentTime = start;
+
+    // Start a monitoring loop to wait for the player to reach the target time
+    seekingInterval = setInterval(() => {
+        // Check if the player has reached or passed the start time
+        if (videoPlayer.currentTime >= start) {
+            // Stop the monitoring loop
+            clearInterval(seekingInterval);
+
+            // Now that we are at the correct position, start playback
+            videoPlayer.play();
+
+            // Calculate the remaining duration from the actual current time for precision
+            const remainingDuration = (end - videoPlayer.currentTime) * 1000;
+
+            if (remainingDuration >= 0) {
+                playbackTimer = setTimeout(() => {
+                    videoPlayer.pause();
+                }, remainingDuration);
+            }
+        }
+    }, 40); // Check roughly 25 times per second
 }
 
 async function updateSubtitlesUI(group) {
