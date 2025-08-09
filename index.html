@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadowing Practice Tool</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;700&family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="google-title">
+                <span>S</span><span>H</span><span>A</span><span>D</span><span>O</span><span>W</span><span>I</span><span>N</span><span>G</span>
+            </h1>
+            <p class="creator-name">Created by Wrya Zrebar</p>
+        </header>
+        
+        <main>
+            <div class="input-area">
+                <input type="text" id="youtube-link" placeholder="Paste YouTube Link Here...">
+                <button id="load-btn">Load</button>
+            </div>
+
+            <div id="player-container" class="hidden">
+                <div id="video-player"></div>
+                
+                <div id="subtitle-box">
+                    <p id="subtitle-en">English subtitle will appear here.</p>
+                    <p id="subtitle-tr" lang="fa" dir="rtl">ترجمه در اینجا نمایش داده خواهد شد.</p>
+                </div>
+
+                <div class="main-controls">
+                    <button id="prev-btn" title="Previous">⏮️</button>
+                    <button id="repeat-btn" title="Repeat">🔁</button>
+                    <button id="next-btn" title="Next">⏭️</button>
+                </div>
+
+                <div class="settings">
+                    <div class="setting-item">
+                        <label for="sentence-group">Play</label>
+                        <select id="sentence-group">
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                        <label>sentence(s)</label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="translate-lang">Translate to</label>
+                        <select id="translate-lang">
+                            <option value="fa">Persian (فارسی)</option>
+                            <option value="es">Spanish</option>
+                            <option value="de">German</option>
+                            <option value="fr">French</option>
+                            <option value="ar">Arabic</option>
+                            <option value="tr">Turkish</option>
+                            <option value="none">None</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loading-indicator" class="hidden">
+                <p>Loading... Please wait.</p>
+            </div>
+        </main>
+
+        <footer>
+            <p id="stats">Visitors: <span id="visitor-count">...</span> | Videos Loaded: <span id="video-count">...</span></p>
+        </footer>
+    </div>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
