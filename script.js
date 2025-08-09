@@ -1,12 +1,12 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 2.0 - MANUAL SUBTITLES)
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 2.1 - FLEXIBLE PARSER)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Added manual SRT input for full user control.
+// Changelog: Made the SRT parser highly flexible to support various timestamp formats.
 // =================================================================
 
 // --- 1. DOM Element Connections ---
 const youtubeLinkInput = document.getElementById('youtube-link');
-const customSrtInput = document.getElementById('custom-srt-input'); // New element
+const customSrtInput = document.getElementById('custom-srt-input');
 const loadBtn = document.getElementById('load-btn');
 const playerContainer = document.getElementById('player-container');
 const loadingIndicator = document.getElementById('loading-indicator');
@@ -42,16 +42,14 @@ loadBtn.addEventListener('click', async () => {
         let fetchedSubtitles;
 
         if (customSrtText) {
-            // --- STRATEGY 1: User provided manual subtitles ---
             console.log("Using custom subtitles provided by user.");
             fetchedSubtitles = parseSrt(customSrtText);
         } else {
-            // --- STRATEGY 2: Fetch from YouTube ---
             console.log(`Attempting to fetch subtitles for video ID: ${videoId}`);
-            fetchedSubtitles = await fetchSubtitles(videoId, 'en'); // Try manual 'en'
+            fetchedSubtitles = await fetchSubtitles(videoId, 'en');
             if (!fetchedSubtitles) {
                 console.log("Manual 'en' subs not found. Trying auto-generated 'a.en'...");
-                fetchedSubtitles = await fetchSubtitles(videoId, 'a.en'); // Fallback to auto-generated
+                fetchedSubtitles = await fetchSubtitles(videoId, 'a.en');
             }
         }
 
@@ -89,7 +87,7 @@ async function fetchSubtitles(videoId, langCode) {
     }
 }
 
-// --- 4. YouTube Player Setup and Control (No changes needed here) ---
+// --- 4. YouTube Player Setup and Control ---
 function onYouTubeIframeAPIReady() {}
 function setupPlayer(videoId) {
     if (player) {
@@ -127,7 +125,7 @@ function playCurrentGroup() {
     playbackTimer = setTimeout(() => { if (player && typeof player.pauseVideo === 'function') { player.pauseVideo(); } }, duration > 0 ? duration : 200);
 }
 
-// --- 5. UI and Translation Logic (No changes needed here) ---
+// --- 5. UI and Translation Logic ---
 async function updateSubtitlesUI(group) {
     const enText = group.map(s => s.text).join(' ');
     subtitleEnElem.textContent = enText;
@@ -145,21 +143,52 @@ async function updateSubtitlesUI(group) {
     } catch (error) { console.error('Translation API error:', error); subtitleTrElem.textContent = '(Translation failed)'; }
 }
 
-// --- 6. Event Listeners for Controls (No changes needed here) ---
+// --- 6. Event Listeners for Controls ---
 nextBtn.addEventListener('click', () => { currentIndex += groupSize; playCurrentGroup(); });
 prevBtn.addEventListener('click', () => { currentIndex -= groupSize; playCurrentGroup(); });
 repeatBtn.addEventListener('click', () => { playCurrentGroup(); });
 sentenceGroupSelect.addEventListener('change', (e) => { groupSize = parseInt(e.target.value, 10); });
 
-// --- 7. Utility Functions (No changes needed here) ---
+// --- 7. Utility Functions ---
 function extractVideoId(url) { const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/; const match = url.match(regex); return match ? match[1] : null; }
 function showLoading(isLoading) { loadingIndicator.classList.toggle('hidden', !isLoading); loadBtn.disabled = isLoading; }
-function parseSrt(data) { const srtRegex = /(\d+)\s*(\d{2}:\d{2}:\d{2}[,.]\d{3}) --> (\d{2}:\d{2}:\d{2}[,.]\d{3})\s*([\s\S]*?)(?=\n\n|\n*$)/g; let match; const result = []; while ((match = srtRegex.exec(data)) !== null) { result.push({ start: timeToSeconds(match[2]), end: timeToSeconds(match[3]), text: match[4].replace(/<[^>]*>/g, "").replace(/\n/g, ' ').trim() }); } return result; }
-function timeToSeconds(time) { const parts = time.replace(',', '.').split(/[:.]/); return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10) + parseInt(parts[3], 10) / 1000; }
 
-// --- 8. Stats Logic (No changes needed here) ---
-function updateVisitorCount() { let visitors = localStorage.getItem('visitorCount_shadowingTool') || 0; visitors = parseInt(visitors) + 1; localStorage.setItem('visitorCount_shadowingTool', visitors); if (visitorCountElem) visitorCountElem.textContent = visitors; }
-function updateVideoCount() { let videos = localStorage.getItem('videoCount_shadowingTool') || 0; videos = parseInt(videos) + 1; localStorage.setItem('videoCount_shadowingTool', videos); if (videoCountElem) videoCountElem.textContent = videos; }
+// --- NEW & IMPROVED PARSING FUNCTIONS ---
+function parseSrt(srtText) {
+    const blocks = srtText.trim().split(/\n\n|\r\n\r\n/);
+    const subtitles = [];
 
-// --- 9. Initial App Load (No changes needed here) ---
-document.addEventListener('DOMContentLoaded', () => { groupSize = parseInt(sentenceGroupSelect.value, 10); updateVisitorCount(); const storedVideos = localStorage.getItem('videoCount_shadowingTool') || 0; if (videoCountElem) videoCountElem.textContent = storedVideos; });
+    for (const block of blocks) {
+        const lines = block.split(/\n|\r\n/);
+        if (lines.length < 2) continue;
+
+        const timeLine = lines[1];
+        const timeMatch = timeLine.match(/(\S+)\s*-->\s*(\S+)/);
+
+        if (timeMatch) {
+            const start = timeToSeconds(timeMatch[1]);
+            const end = timeToSeconds(timeMatch[2]);
+            const text = lines.slice(2).join(' ').replace(/<[^>]*>/g, "").trim();
+
+            if (!isNaN(start) && !isNaN(end) && text) {
+                subtitles.push({ start, end, text });
+            }
+        }
+    }
+    return subtitles;
+}
+
+function timeToSeconds(timeStr) {
+    const timeParts = timeStr.replace(',', '.').split(':');
+    let seconds = 0;
+
+    try {
+        if (timeParts.length === 3) { // Format: HH:MM:SS.ms
+            seconds += parseFloat(timeParts[0]) * 3600;
+            seconds += parseFloat(timeParts[1]) * 60;
+            seconds += parseFloat(timeParts[2]);
+        } else if (timeParts.length === 2) { // Format: MM:SS.ms
+            seconds += parseFloat(timeParts[0]) * 60;
+            seconds += parseFloat(timeParts[1]);
+        } else {
+            return NaN; // Inval
