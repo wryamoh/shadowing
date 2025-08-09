@@ -166,7 +166,8 @@ sentenceGroupSelect.addEventListener('change', (e) => {
 
 // --- Utility Functions ---
 function extractVideoId(url) {
-    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    // This new regex handles standard links, short links (youtu.be), and shorts links.
+    const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
     const match = url.match(regex);
     return match ? match[1] : null;
 }
