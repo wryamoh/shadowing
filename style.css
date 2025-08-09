@@ -91,7 +91,11 @@ header { margin-bottom: 20px; }
 }
 #load-btn:hover { background-color: var(--primary-color-hover); box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
 
-#video-player { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; }
+#video-player { 
+    width: 100%; 
+    border-radius: 8px; 
+    background-color: #000;
+}
 #subtitle-box { margin-top: 20px; padding: 15px; background-color: var(--subtitle-bg); border-radius: 8px; min-height: 80px; }
 #subtitle-en { font-size: 1.2em; font-weight: bold; margin: 0 0 10px 0; }
 #subtitle-tr { font-size: 1.1em; margin: 0; }
