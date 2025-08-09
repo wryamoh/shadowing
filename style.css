@@ -58,21 +58,13 @@ header { margin-bottom: 20px; }
 .input-group { text-align: left; }
 .input-group label { font-weight: bold; margin-bottom: 8px; display: block; font-size: 0.9em; }
 
-#youtube-link {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 16px;
-    box-sizing: border-box;
-}
-
-#srt-file-input {
+#video-file-input, #srt-file-input {
     width: 100%;
     border: 1px solid var(--border-color);
     padding: 10px;
     border-radius: 8px;
     box-sizing: border-box;
+    font-family: inherit;
 }
 
 #load-btn {
