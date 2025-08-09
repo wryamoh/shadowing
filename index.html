@@ -33,7 +33,7 @@
     #logo span:nth-child(7) { color: #F4B400; }
     #logo span:nth-child(8) { color: #4285F4; }
     #logo span:nth-child(9) { color: #0F9D58; }
-    #logo span:nth-child(10) { color: transparent; } /* space */
+    #logo span:nth-child(10) { color: transparent; } /* فاصله */
     #logo span:nth-child(11) { color: #DB4437; }
     #logo span:nth-child(12) { color: #F4B400; }
     #logo span:nth-child(13) { color: #4285F4; }
@@ -241,6 +241,7 @@
 
     function onPlayerReady(event) {
       disableControls(true);
+      document.getElementById('loadBtn').disabled = false; // اطمینان دکمه Load فعال است
     }
 
     function onPlayerStateChange(event) {
@@ -259,7 +260,8 @@
       document.getElementById('playSegmentBtn').disabled = disable;
       document.getElementById('calibrateBtn').disabled = disable;
       document.getElementById('segmentCount').disabled = disable;
-      document.getElementById('loadBtn').disabled = disable;
+      // Load button همیشه فعال باشد
+      // document.getElementById('loadBtn').disabled = disable;
     }
 
     function parseTimestamp(timestamp) {
