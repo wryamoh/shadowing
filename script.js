@@ -1,12 +1,13 @@
 // =================================================================
-// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 2.1 - FLEXIBLE PARSER)
+// FINAL SCRIPT FOR YOUTUBE SHADOWING TOOL (VERSION 3.0 - FULL MANUAL CONTROL)
 // Author: Wrya Zrebar & AI Assistant
-// Changelog: Made the SRT parser highly flexible to support various timestamp formats.
+// Changelog: Removed dependency on YouTube subtitles. User must provide SRT text or file.
 // =================================================================
 
 // --- 1. DOM Element Connections ---
 const youtubeLinkInput = document.getElementById('youtube-link');
 const customSrtInput = document.getElementById('custom-srt-input');
+const srtFileInput = document.getElementById('srt-file-input');
 const loadBtn = document.getElementById('load-btn');
 const playerContainer = document.getElementById('player-container');
 const loadingIndicator = document.getElementById('loading-indicator');
@@ -35,32 +36,33 @@ loadBtn.addEventListener('click', async () => {
     const videoId = extractVideoId(url);
     if (!videoId) return alert('Invalid YouTube link. Please check the URL format.');
 
+    const customSrtText = customSrtInput.value.trim();
+    const srtFile = srtFileInput.files[0];
+
+    if (!customSrtText && !srtFile) {
+        return alert('Please provide subtitles by either pasting SRT text or uploading an SRT file.');
+    }
+
     showLoading(true);
     
     try {
-        const customSrtText = customSrtInput.value.trim();
-        let fetchedSubtitles;
-
-        if (customSrtText) {
-            console.log("Using custom subtitles provided by user.");
-            fetchedSubtitles = parseSrt(customSrtText);
+        let srtContent = '';
+        if (srtFile) {
+            srtContent = await srtFile.text();
         } else {
-            console.log(`Attempting to fetch subtitles for video ID: ${videoId}`);
-            fetchedSubtitles = await fetchSubtitles(videoId, 'en');
-            if (!fetchedSubtitles) {
-                console.log("Manual 'en' subs not found. Trying auto-generated 'a.en'...");
-                fetchedSubtitles = await fetchSubtitles(videoId, 'a.en');
-            }
+            srtContent = customSrtText;
         }
 
-        if (!fetchedSubtitles || fetchedSubtitles.length === 0) {
-            alert('Could not find or parse any subtitles. Please check the YouTube link or the format of your custom SRT text.');
+        const parsedSubtitles = parseSrt(srtContent);
+
+        if (!parsedSubtitles || parsedSubtitles.length === 0) {
+            alert('Could not parse any subtitles. Please check the format of your SRT text/file.');
             showLoading(false);
             return;
         }
 
-        console.log(`Successfully loaded ${fetchedSubtitles.length} subtitle entries.`);
-        subtitles = fetchedSubtitles;
+        console.log(`Successfully loaded ${parsedSubtitles.length} subtitle entries.`);
+        subtitles = parsedSubtitles;
         setupPlayer(videoId);
         updateVideoCount();
         
@@ -70,22 +72,6 @@ loadBtn.addEventListener('click', async () => {
         showLoading(false);
     }
 });
-
-async function fetchSubtitles(videoId, langCode) {
-    const proxyUrl = 'https://api.allorigins.win/raw?url=';
-    const subtitlesUrl = `https://www.youtube.com/api/timedtext?lang=${langCode}&v=${videoId}&fmt=srv3`;
-    try {
-        const response = await axios.get(proxyUrl + encodeURIComponent(subtitlesUrl), { timeout: 15000 });
-        if (response.status === 200 && response.data) {
-            const parsedSubs = parseSrt(response.data);
-            return parsedSubs.length > 0 ? parsedSubs : null;
-        }
-        return null;
-    } catch (error) {
-        console.log(`Failed to fetch subtitles for lang=${langCode}. This is often expected.`);
-        return null;
-    }
-}
 
 // --- 4. YouTube Player Setup and Control ---
 function onYouTubeIframeAPIReady() {}
@@ -152,24 +138,20 @@ sentenceGroupSelect.addEventListener('change', (e) => { groupSize = parseInt(e.t
 // --- 7. Utility Functions ---
 function extractVideoId(url) { const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/; const match = url.match(regex); return match ? match[1] : null; }
 function showLoading(isLoading) { loadingIndicator.classList.toggle('hidden', !isLoading); loadBtn.disabled = isLoading; }
-
-// --- NEW & IMPROVED PARSING FUNCTIONS ---
 function parseSrt(srtText) {
-    const blocks = srtText.trim().split(/\n\n|\r\n\r\n/);
+    const blocks = srtText.trim().replace(/\r\n/g, '\n').split(/\n\n/);
     const subtitles = [];
-
     for (const block of blocks) {
-        const lines = block.split(/\n|\r\n/);
+        const lines = block.split('\n');
         if (lines.length < 2) continue;
-
-        const timeLine = lines[1];
+        const timeLineIndex = lines.findIndex(line => line.includes('-->'));
+        if (timeLineIndex === -1) continue;
+        const timeLine = lines[timeLineIndex];
         const timeMatch = timeLine.match(/(\S+)\s*-->\s*(\S+)/);
-
         if (timeMatch) {
             const start = timeToSeconds(timeMatch[1]);
             const end = timeToSeconds(timeMatch[2]);
-            const text = lines.slice(2).join(' ').replace(/<[^>]*>/g, "").trim();
-
+            const text = lines.slice(timeLineIndex + 1).join(' ').replace(/<[^>]*>/g, "").trim();
             if (!isNaN(start) && !isNaN(end) && text) {
                 subtitles.push({ start, end, text });
             }
@@ -177,18 +159,38 @@ function parseSrt(srtText) {
     }
     return subtitles;
 }
-
 function timeToSeconds(timeStr) {
     const timeParts = timeStr.replace(',', '.').split(':');
     let seconds = 0;
-
     try {
-        if (timeParts.length === 3) { // Format: HH:MM:SS.ms
+        if (timeParts.length === 3) {
             seconds += parseFloat(timeParts[0]) * 3600;
             seconds += parseFloat(timeParts[1]) * 60;
             seconds += parseFloat(timeParts[2]);
-        } else if (timeParts.length === 2) { // Format: MM:SS.ms
+        } else if (timeParts.length === 2) {
             seconds += parseFloat(timeParts[0]) * 60;
             seconds += parseFloat(timeParts[1]);
-        } else {
-            return NaN; // Inval
+        } else { return NaN; }
+        return seconds;
+    } catch (e) { return NaN; }
+}
+
+// --- 8. Stats Logic ---
+function updateVisitorCount() { let visitors = localStorage.getItem('visitorCount_shadowingTool') || 0; visitors = parseInt(visitors) + 1; localStorage.setItem('visitorCount_shadowingTool', visitors); if (visitorCountElem) visitorCountElem.textContent = visitors; }
+function updateVideoCount() { let videos = localStorage.getItem('videoCount_shadowingTool') || 0; videos = parseInt(videos) + 1; localStorage.setItem('videoCount_shadowingTool', videos); if (videoCountElem) videoCountElem.textContent = videos; }
+
+// --- 9. Initial App Load ---
+document.addEventListener('DOMContentLoaded', () => {
+    groupSize = parseInt(sentenceGroupSelect.value, 10);
+    updateVisitorCount();
+    const storedVideos = localStorage.getItem('videoCount_shadowingTool') || 0;
+    if (videoCountElem) videoCountElem.textContent = storedVideos;
+    
+    // Clear textarea if a file is selected
+    srtFileInput.addEventListener('change', () => {
+        if (srtFileInput.files.length > 0) {
+            customSrtInput.value = '';
+            customSrtInput.placeholder = `File selected: ${srtFileInput.files[0].name}`;
+        }
+    });
+});
